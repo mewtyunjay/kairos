@@ -1,0 +1,23 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer components {
+  .task-card {
+    @apply bg-zinc-800 rounded-xl border border-zinc-700/50 shadow-md hover:shadow-lg hover:-translate-y-1 transition-all duration-200 p-6 cursor-pointer;
+  }
+
+  .task-badge {
+    @apply bg-zinc-700/50 border border-zinc-600 rounded-md px-2 py-1 text-sm shadow-sm hover:scale-105 transition-transform duration-100;
+  }
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+.animate-fade-in {
+  animation: fadeIn 0.3s ease-in-out;
+}
+

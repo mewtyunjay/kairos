@@ -1,0 +1,38 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  --foreground-rgb: 255, 255, 255;
+  --background-start-rgb: 24, 24, 27;
+  --background-end-rgb: 24, 24, 27;
+  --card-bg: 39, 39, 42;
+  --card-hover: 63, 63, 70;
+  --text-secondary: 161, 161, 170;
+}
+
+* {
+  transition: background-color 0.2s, border-color 0.2s, ring-color 0.2s;
+}
+
+body {
+  color: rgb(var(--foreground-rgb));
+  background: rgb(var(--background-start-rgb));
+}
+
+.card {
+  @apply bg-zinc-800 rounded-xl p-4 hover:bg-zinc-700 transition-colors;
+}
+
+.card-hover {
+  @apply hover:bg-zinc-700 hover:ring-1 hover:ring-zinc-600 transition-all;
+}
+
+.text-secondary {
+  @apply text-zinc-400;
+}
+
+input[type="checkbox"] {
+  @apply rounded border-2 border-zinc-600 bg-transparent checked:bg-blue-500 checked:border-blue-500 focus:ring-blue-500 focus:ring-offset-zinc-900;
+}
+
