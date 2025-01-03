@@ -1,0 +1,69 @@
+# System files
+.DS_Store
+*/.DS_Store
+**/.DS_Store
+
+# Frontend
+/frontend/.next/
+/frontend/out/
+/frontend/node_modules/
+/frontend/build/
+/frontend/*.tsbuildinfo
+/frontend/next-env.d.ts
+/frontend/.vercel
+
+# Backend
+/backend/__pycache__/
+/backend/**/__pycache__/
+/backend/venv/
+/backend/env/
+/backend/ENV/
+/backend/.venv
+/backend/build/
+/backend/dist/
+/backend/*.egg-info/
+/backend/instance/
+
+# Environment Variables
+.env
+**/.env
+.env.local
+.env.*.local
+/frontend/.env*
+/backend/.env*
+
+# Dependencies
+**/node_modules/
+package-lock.json
+/frontend/package-lock.json
+
+# Debug & Logs
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+.pnpm-debug.log*
+/backend/*.log
+
+# IDE and Editor
+.idea/
+.vscode/
+**/.idea/
+**/.vscode/
+*.swp
+*.swo
+
+# Database
+*.db
+*.sqlite3
+
+# Testing and cache
+.coverage
+.pytest_cache/
+.eslintcache
+.cache
+coverage/
+htmlcov/
+/frontend/.eslintcache
+/frontend/.cache
+/backend/.coverage
+/backend/.pytest_cache/
