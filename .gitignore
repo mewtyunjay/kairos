@@ -34,8 +34,6 @@
 
 # Dependencies
 **/node_modules/
-package-lock.json
-/frontend/package-lock.json
 
 # Debug & Logs
 npm-debug.log*
