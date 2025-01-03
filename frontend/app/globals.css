@@ -9,6 +9,9 @@
   --card-bg: 39, 39, 42;
   --card-hover: 63, 63, 70;
   --text-secondary: 161, 161, 170;
+  --card-background: rgba(28, 28, 30, 0.8);
+  --card-hover: rgba(44, 44, 46, 0.8);
+  --card-border: rgba(255, 255, 255, 0.1);
 }
 
 * {
@@ -18,6 +21,28 @@
 body {
   color: rgb(var(--foreground-rgb));
   background: rgb(var(--background-start-rgb));
+  letter-spacing: -0.02em;
+}
+
+/* Typography adjustments for monospace */
+h1 {
+  @apply text-5xl font-bold;
+  letter-spacing: -0.04em;
+}
+
+h2 {
+  @apply text-3xl font-semibold;
+  letter-spacing: -0.03em;
+}
+
+h3 {
+  @apply text-xl font-semibold;
+  letter-spacing: -0.03em;
+}
+
+h4 {
+  @apply text-lg font-medium;
+  letter-spacing: -0.03em;
 }
 
 .card {
@@ -34,5 +59,115 @@ body {
 
 input[type="checkbox"] {
   @apply rounded border-2 border-zinc-600 bg-transparent checked:bg-blue-500 checked:border-blue-500 focus:ring-blue-500 focus:ring-offset-zinc-900;
+}
+
+.task-card {
+  @apply relative overflow-hidden;
+  background: var(--card-background);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  border: 1px solid var(--card-border);
+  box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.2);
+  transition: all 0.3s ease;
+}
+
+.task-card:hover {
+  background: var(--card-hover);
+  transform: translateY(-2px);
+  box-shadow: 0 12px 40px 0 rgba(0, 0, 0, 0.3);
+}
+
+.task-card.selected {
+  border: 1px solid rgba(59, 130, 246, 0.5);
+  box-shadow: 0 0 0 1px rgba(59, 130, 246, 0.5), 
+              0 8px 32px 0 rgba(0, 0, 0, 0.2);
+}
+
+.glass-panel {
+  background: var(--card-background);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  border: 1px solid var(--card-border);
+  box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.2);
+}
+
+.custom-checkbox {
+  @apply relative w-5 h-5 rounded-lg border-2 appearance-none cursor-pointer transition-all duration-200;
+  background: rgba(255, 255, 255, 0.1);
+  border-color: rgba(255, 255, 255, 0.2);
+}
+
+.custom-checkbox:checked {
+  @apply bg-blue-500 border-blue-500;
+}
+
+.custom-checkbox:checked::after {
+  content: '';
+  @apply absolute transform rotate-45 border-white;
+  width: 3px;
+  height: 6px;
+  border-width: 0 2px 2px 0;
+  left: 6px;
+  top: 3px;
+}
+
+.loading-overlay {
+  @apply fixed inset-0 bg-black/50 backdrop-blur-sm z-50 
+         flex flex-col items-center justify-center;
+  animation: fadeIn 0.2s ease-out;
+}
+
+.loading-spinner {
+  width: 40px;
+  height: 40px;
+  border: 3px solid rgba(255, 255, 255, 0.1);
+  border-radius: 50%;
+  border-top-color: #fff;
+  animation: spin 1s linear infinite;
+}
+
+.loading-text {
+  @apply mt-4 text-white/90 font-medium;
+  animation: pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+}
+
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+@keyframes pulse {
+  0%, 100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.7;
+  }
+}
+
+/* Add this with your other animations */
+@keyframes slideDown {
+  from {
+    opacity: 0;
+    transform: translateY(-10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.animate-fadeIn {
+  animation: slideDown 0.2s ease-out forwards;
 }
 

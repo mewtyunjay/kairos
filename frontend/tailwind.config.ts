@@ -12,6 +12,10 @@ export default {
         background: "var(--background)",
         foreground: "var(--foreground)",
       },
+      fontFamily: {
+        sans: ['var(--font-jetbrains)'],
+        mono: ['var(--font-jetbrains)'],
+      },
     },
   },
   plugins: [],

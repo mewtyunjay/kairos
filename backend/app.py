@@ -4,24 +4,34 @@ from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 from services.claude import process_tasks
 from services.deepseek import DeepSeekService
+from typing import List
+from models import AIModel
 
 app = FastAPI()
 
 # Enable CORS for your frontend
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["http://localhost:5173"],  # svelte dev server
+    allow_origins=["http://localhost:3000"],  
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
 )
 
 class TaskInput(BaseModel):
-    input: str
+    prompt: str
 
-@app.post("/process-tasks")
+class Message(BaseModel):
+    role: str
+    content: str
+
+class ChatRequest(BaseModel):
+    model: AIModel
+    messages: List[Message]
+
+@app.post("/plan")
 async def handle_tasks(task_input: TaskInput):
-    tasks = process_tasks(task_input.input)
+    tasks = process_tasks(task_input.prompt)
     return {"tasks": tasks}
 
 deepseek_service = DeepSeekService()
