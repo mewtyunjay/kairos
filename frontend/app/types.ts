@@ -8,6 +8,7 @@ export interface SubTask {
     name: string;
     duration_minutes: number;
     description: string;
+    completed?: boolean;
 }
 
 export interface DetailedTask extends Task {

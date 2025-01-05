@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react'
 import TaskInput from './components/TaskInput'
 import TaskCard from './components/TaskCard'
+import { default as Navbar } from './components/Navbar'
 import { Task, DetailedTask, SubTask } from './types'
 
 export default function Home() {
@@ -21,11 +22,15 @@ export default function Home() {
   // Load state from localStorage after component mounts
   useEffect(() => {
     const savedTasks = localStorage.getItem('tasks');
+    const savedDetailedTasks = localStorage.getItem('detailedTasks');
     const savedHasStartedPlanning = localStorage.getItem('hasStartedPlanning');
+    const savedHasStartedBreakdown = localStorage.getItem('hasStartedBreakdown');
     const savedUserInput = localStorage.getItem('userInput');
 
     if (savedTasks) setTasks(JSON.parse(savedTasks));
+    if (savedDetailedTasks) setDetailedTasks(JSON.parse(savedDetailedTasks));
     if (savedHasStartedPlanning) setHasStartedPlanning(savedHasStartedPlanning === 'true');
+    if (savedHasStartedBreakdown) setHasStartedBreakdown(savedHasStartedBreakdown === 'true');
     if (savedUserInput) setUserInput(savedUserInput);
     
     setIsHydrated(true);
@@ -33,19 +38,31 @@ export default function Home() {
 
   // Save state to localStorage whenever it changes
   useEffect(() => {
-    if (!isHydrated) return; // Don't save during initial hydration
+    if (!isHydrated) return;
 
     localStorage.setItem('tasks', JSON.stringify(tasks));
+    localStorage.setItem('detailedTasks', JSON.stringify(detailedTasks));
     localStorage.setItem('hasStartedPlanning', hasStartedPlanning.toString());
+    localStorage.setItem('hasStartedBreakdown', hasStartedBreakdown.toString());
     localStorage.setItem('userInput', userInput);
-  }, [tasks, hasStartedPlanning, userInput, isHydrated]);
+  }, [tasks, detailedTasks, hasStartedPlanning, hasStartedBreakdown, userInput, isHydrated]);
 
   const handleReset = () => {
     if (window.confirm('Are you sure you want to start over? This will clear all your tasks.')) {
       setTasks([]);
+      setDetailedTasks([]);
       setHasStartedPlanning(false);
+      setHasStartedBreakdown(false);
       setUserInput('');
       localStorage.clear();
+    }
+  };
+
+  const handleBack = () => {
+    if (hasStartedBreakdown) {
+      setHasStartedBreakdown(false);
+    } else if (hasStartedPlanning) {
+      setHasStartedPlanning(false);
     }
   };
 
@@ -181,18 +198,39 @@ export default function Home() {
     ));
   };
 
+  const toggleSubtaskCompletion = (taskIndex: number, subtaskIndex: number) => {
+    setDetailedTasks(prev => prev.map((task, i) => 
+      i === taskIndex 
+        ? {
+            ...task,
+            subtasks: task.subtasks.map((subtask, j) => 
+              j === subtaskIndex 
+                ? { ...subtask, completed: !subtask.completed }
+                : subtask
+            )
+          }
+        : task
+    ));
+  };
+
   return (
     <>
       {isLoading && (
         <div className="loading-overlay">
           <div className="loading-spinner" />
           <div className="loading-text">
-            {hasStartedBreakdown ? 'Breaking down tasks into smaller chunks...' : 'Analyzing your tasks...'}
+            {hasStartedBreakdown ? 'Breaking down tasks into smaller steps...' : 'Analyzing your tasks...'}
           </div>
         </div>
       )}
       
-      <main className="min-h-screen bg-gradient-to-b from-zinc-900 to-black text-white p-6">
+      <Navbar 
+        onReset={handleReset}
+        onBack={handleBack}
+        showBack={hasStartedPlanning}
+      />
+      
+      <main className="min-h-screen bg-gradient-to-b from-zinc-900 to-black text-white p-6 pt-24">
         {/* Home button - always visible */}
         <button
           onClick={handleReset}
@@ -383,16 +421,16 @@ export default function Home() {
         ) : (
           <div className="grid grid-cols-2 gap-6">
             <div className="space-y-4">
-              {detailedTasks.map((task, index) => (
+              {detailedTasks.map((task, taskIndex) => (
                 <div 
-                  key={index} 
+                  key={taskIndex} 
                   className={`task-card p-4 rounded-xl transition-all ${
                     task.isExpanded ? 'bg-zinc-800/50' : 'hover:bg-zinc-800/30'
                   }`}
                 >
                   <div 
                     className="flex items-center justify-between cursor-pointer"
-                    onClick={() => toggleTaskExpansion(index)}
+                    onClick={() => toggleTaskExpansion(taskIndex)}
                   >
                     <div className="flex-1">
                       <h4 className="font-medium text-lg">{task.name}</h4>
@@ -421,13 +459,38 @@ export default function Home() {
                   {task.isExpanded && (
                     <div className="mt-4 space-y-3 pl-4 border-l-2 border-zinc-700">
                       {task.subtasks.map((subtask, subtaskIndex) => (
-                        <div key={subtaskIndex} className="p-3 rounded-lg bg-zinc-800/30">
-                          <div className="flex items-center justify-between">
+                        <div 
+                          key={subtaskIndex} 
+                          className="p-3 rounded-lg bg-zinc-800/30 flex items-start gap-3"
+                        >
+                          <button
+                            onClick={() => toggleSubtaskCompletion(taskIndex, subtaskIndex)}
+                            className={`mt-1 w-5 h-5 rounded border transition-colors flex-shrink-0 ${
+                              subtask.completed
+                                ? 'bg-green-500/20 border-green-500/50'
+                                : 'border-zinc-600 hover:border-zinc-500'
+                            }`}
+                          >
+                            {subtask.completed && (
+                              <svg className="w-full h-full text-green-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                              </svg>
+                            )}
+                          </button>
+                          <div className="flex-1 flex items-center justify-between">
                             <div>
-                              <h5 className="font-medium">{subtask.name}</h5>
-                              <p className="text-sm text-zinc-400">{subtask.description}</p>
+                              <h5 className={`font-medium ${subtask.completed ? 'line-through text-zinc-500' : ''}`}>
+                                {subtask.name}
+                              </h5>
+                              <p className={`text-sm ${subtask.completed ? 'text-zinc-600' : 'text-zinc-400'}`}>
+                                {subtask.description}
+                              </p>
                             </div>
-                            <span className="px-2 py-1 rounded-full bg-blue-500/10 text-blue-400 text-sm">
+                            <span className={`px-2 py-1 rounded-full text-sm ${
+                              subtask.completed
+                                ? 'bg-green-500/10 text-green-400'
+                                : 'bg-blue-500/10 text-blue-400'
+                            }`}>
                               {subtask.duration_minutes}m
                             </span>
                           </div>
