@@ -1,21 +1,44 @@
 export interface Task {
-    name: string;
-    description: string;
-    confirmed: boolean | undefined;
+  id: string;
+  name: string;
+  description: string;
+  duration_minutes: number;
+  priority: number;
+  isEditing?: boolean;
+  isTimerRunning?: boolean;
+  timeRemaining?: number;
+  hasSubtasks?: boolean;
+  subtasks?: Subtask[];
+  isCompleted?: boolean;
 }
 
-export interface SubTask {
-    name: string;
-    duration_minutes: number;
-    description: string;
-    completed?: boolean;
+export interface Subtask {
+  id: string;
+  name: string;
+  description: string;
+  duration_minutes: number;
+  isCompleted: boolean;
+  isEditing?: boolean;
+  isTimerRunning?: boolean;
+  timeRemaining?: number;
 }
 
-export interface DetailedTask extends Task {
-    duration_minutes: number;
-    priority: number;
-    subtasks: SubTask[];
-    isExpanded?: boolean;
+export interface Message {
+  role: 'user' | 'assistant';
+  content: string;
+}
+
+export interface ChatState {
+  messages: Message[];
+  isTyping: boolean;
+}
+
+export interface TimerState {
+  taskId: string | null;
+  subtaskId: string | null;
+  startTime: number | null;
+  timeRemaining: number;
+  isRunning: boolean;
 }
   
   
