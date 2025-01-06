@@ -22,6 +22,18 @@ export default function Home() {
   });
 
   useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if ((e.metaKey || e.ctrlKey) && e.key === 'Enter' && !hasStartedPlanning && userInput.trim()) {
+        e.preventDefault();
+        handlePlanDay();
+      }
+    };
+
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [userInput, hasStartedPlanning]);
+
+  useEffect(() => {
     const savedTasks = localStorage.getItem('tasks');
     const savedUserInput = localStorage.getItem('userInput');
     const savedHasStartedPlanning = localStorage.getItem('hasStartedPlanning');

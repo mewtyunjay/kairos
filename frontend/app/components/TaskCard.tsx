@@ -62,9 +62,9 @@ export default function TaskCard({ task, onUpdate, onGenerateSubtasks, onTimerCl
       exit={{ opacity: 0, y: 20 }}
       transition={{ 
         type: "spring",
-        stiffness: 500,
-        damping: 30,
-        opacity: { duration: 0.2 }
+        stiffness: 200,
+        damping: 25,
+        opacity: { duration: 0.3 }
       }}
       className={`task-card p-3 rounded-xl bg-zinc-800/30 hover:bg-zinc-800/50 ${
         task.isCompleted ? 'opacity-60' : ''
@@ -129,20 +129,22 @@ export default function TaskCard({ task, onUpdate, onGenerateSubtasks, onTimerCl
                 <p className={`text-sm text-zinc-400 ${task.isCompleted ? 'line-through' : ''}`}>
                   {task.description}
                 </p>
+                {!task.hasSubtasks && !task.isCompleted && (
+                  <button
+                    onClick={() => onGenerateSubtasks(task.id)}
+                    className="mt-2 text-xs text-blue-400 hover:text-blue-300 transition-colors flex items-center gap-1"
+                  >
+                    <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
+                    </svg>
+                    Break into subtasks with AI
+                  </button>
+                )}
               </>
             )}
           </motion.div>
         </div>
         <motion.div layout="position" className="flex items-center gap-2">
-          <button
-            onClick={() => setIsEditing(true)}
-            className="p-1.5 rounded-lg bg-zinc-800/50 hover:bg-zinc-700/50 transition-all"
-            title="Edit task"
-          >
-            <svg className="w-4 h-4 text-zinc-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
-            </svg>
-          </button>
           {!task.isCompleted && (
             <motion.div layout="position">
               <TimerPill
@@ -155,17 +157,15 @@ export default function TaskCard({ task, onUpdate, onGenerateSubtasks, onTimerCl
               />
             </motion.div>
           )}
-          {!task.hasSubtasks && !task.isCompleted && (
-            <button
-              onClick={() => onGenerateSubtasks(task.id)}
-              className="p-1.5 rounded-lg bg-zinc-800/50 hover:bg-zinc-700/50 transition-all"
-              title="Generate subtasks"
-            >
-              <svg className="w-4 h-4 text-zinc-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16m-7 6h7" />
-              </svg>
-            </button>
-          )}
+          <button
+            onClick={() => setIsEditing(true)}
+            className="p-1.5 rounded-lg bg-zinc-800/50 hover:bg-zinc-700/50 transition-all"
+            title="Edit task"
+          >
+            <svg className="w-4 h-4 text-zinc-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+            </svg>
+          </button>
         </motion.div>
       </motion.div>
 
@@ -207,7 +207,7 @@ export default function TaskCard({ task, onUpdate, onGenerateSubtasks, onTimerCl
                       index
                     );
                   }}
-                  className="w-4 h-4 rounded border-zinc-600 text-blue-500 focus:ring-blue-500"
+                  className="w-4 h-4 rounded border-zinc-600 text-zinc-900 bg-zinc-900 focus:ring-blue-500"
                 />
                 <div className="flex-1">
                   {subtask.isEditing ? (

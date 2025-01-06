@@ -26,6 +26,23 @@ export default function TimerPill({ duration, isRunning, timeRemaining, onStart,
     return `${minutes}:${remainingSeconds.toString().padStart(2, '0')}`;
   };
 
+  // Reset states when timer is stopped
+  useEffect(() => {
+    if (timeRemaining === undefined) {
+      setIsPaused(false);
+      setIsExpanded(false);
+    }
+  }, [timeRemaining]);
+
+  // Update pause state when running state changes
+  useEffect(() => {
+    if (!isRunning) {
+      setIsPaused(true);
+    } else {
+      setIsPaused(false);
+    }
+  }, [isRunning]);
+
   const handlePauseClick = (e: React.MouseEvent) => {
     e.stopPropagation();
     setIsPaused(!isPaused);
@@ -54,13 +71,6 @@ export default function TimerPill({ duration, isRunning, timeRemaining, onStart,
       handleStartClick();
     }
   };
-
-  useEffect(() => {
-    if (!isRunning && timeRemaining === undefined) {
-      setIsPaused(false);
-      setIsExpanded(false);
-    }
-  }, [isRunning, timeRemaining]);
 
   const isActive = timeRemaining !== undefined;
   const showPauseIcon = isRunning && !isPaused;

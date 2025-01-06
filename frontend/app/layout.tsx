@@ -19,8 +19,17 @@ export default function RootLayout({
   children: React.ReactNode
 }) {
   return (
-    <html lang="en" className={jetbrainsMono.variable}>
-      <body className={jetbrainsMono.className}>{children}</body>
+    <html lang="en" className={`${jetbrainsMono.variable}`}>
+      <head>
+        <style>
+          {`
+            * {
+              font-family: var(--font-jetbrains ), sans-serif;
+            }
+          `}
+        </style>
+      </head>
+      <body>{children}</body>
     </html>
   )
 }
