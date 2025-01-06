@@ -207,7 +207,7 @@ export default function TaskCard({ task, onUpdate, onGenerateSubtasks, onTimerCl
                       index
                     );
                   }}
-                  className="w-4 h-4 rounded border-zinc-600 text-zinc-900 bg-zinc-900 focus:ring-blue-500"
+                  className="w-4 h-4 rounded border-zinc-600 bg-zinc-900 text-zinc-900 focus:ring-blue-500"
                 />
                 <div className="flex-1">
                   {subtask.isEditing ? (

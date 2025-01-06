@@ -7,6 +7,7 @@ import Timer from './components/Timer'
 import { Task, TimerState } from './types'
 import { v4 as uuidv4 } from 'uuid'
 import { motion, AnimatePresence } from 'framer-motion'
+import { config } from './config'
 
 export default function Home() {
   const [tasks, setTasks] = useState<Task[]>([]);
@@ -87,7 +88,7 @@ export default function Home() {
     setIsLoading(true)
     
     try {
-      const response = await fetch('http://127.0.0.1:8000/api/plan', {
+      const response = await fetch(`${config.apiBaseUrl}/api/plan`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -129,7 +130,7 @@ export default function Home() {
     setIsLoading(true);
     
     try {
-      const response = await fetch('http://127.0.0.1:8000/api/generate-subtasks', {
+      const response = await fetch(`${config.apiBaseUrl}/api/generate-subtasks`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

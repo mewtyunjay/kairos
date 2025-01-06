@@ -7,6 +7,7 @@ from services.deepseek import DeepSeekService
 import re
 import logging
 import uuid
+import uvicorn
 
 # Set up logging
 logging.basicConfig(level=logging.INFO)
@@ -17,7 +18,11 @@ app = FastAPI()
 # Enable CORS for the frontend
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["http://localhost:3000"],
+    allow_origins=[
+        "http://127.0.0.1:3000",
+        "http://localhost:3000",
+        "http://192.168.29.63:3000"  # Add your local network URL
+    ],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -142,5 +147,5 @@ async def generate_subtasks(request: GenerateSubtasksRequest):
         raise HTTPException(status_code=500, detail=str(e))
 
 if __name__ == "__main__":
-    import uvicorn
+    
     uvicorn.run(app, host="0.0.0.0", port=8000)
