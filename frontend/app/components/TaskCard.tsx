@@ -50,6 +50,9 @@ export default function TaskCard({ task, onUpdate, onGenerateSubtasks, onTimerCl
 
   const handleSubtaskUpdate = (subtask: Subtask, index: number) => {
     const updatedSubtasks = [...(task.subtasks || [])];
+    if (subtask.isEditing === false) {
+      delete subtask.isEditing;
+    }
     updatedSubtasks[index] = subtask;
     onUpdate({ ...task, subtasks: updatedSubtasks });
   };
@@ -220,7 +223,14 @@ export default function TaskCard({ task, onUpdate, onGenerateSubtasks, onTimerCl
                           index
                         );
                       }}
+                      onBlur={() => handleSubtaskUpdate({ ...subtask, isEditing: false }, index)}
+                      onKeyDown={(e) => {
+                        if (e.key === 'Enter') {
+                          handleSubtaskUpdate({ ...subtask, isEditing: false }, index);
+                        }
+                      }}
                       className="w-full bg-zinc-800/50 rounded-lg p-1.5 text-sm text-white placeholder-zinc-500 focus:ring-2 focus:ring-blue-500 focus:outline-none"
+                      autoFocus
                     />
                   ) : (
                     <span className={`text-sm ${subtask.isCompleted ? 'line-through text-zinc-500' : ''}`}>

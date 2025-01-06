@@ -265,7 +265,7 @@ export default function Home() {
           <div className="bg-zinc-900 p-6 rounded-2xl flex flex-col items-center gap-4">
             <div className="w-16 h-16 border-4 border-blue-500/30 border-t-blue-500 rounded-full animate-spin" />
             <p className="text-zinc-400">
-              {tasks.length > 0 ? 'Breaking down task into smaller steps...' : 'Analyzing your tasks...'}
+              {tasks.length > 0 ? 'Creating subtasks...' : 'Analyzing your tasks...'}
             </p>
           </div>
         </div>

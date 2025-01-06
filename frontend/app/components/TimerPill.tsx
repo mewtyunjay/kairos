@@ -26,23 +26,6 @@ export default function TimerPill({ duration, isRunning, timeRemaining, onStart,
     return `${minutes}:${remainingSeconds.toString().padStart(2, '0')}`;
   };
 
-  // Reset states when timer is stopped
-  useEffect(() => {
-    if (timeRemaining === undefined) {
-      setIsPaused(false);
-      setIsExpanded(false);
-    }
-  }, [timeRemaining]);
-
-  // Update pause state when running state changes
-  useEffect(() => {
-    if (!isRunning) {
-      setIsPaused(true);
-    } else {
-      setIsPaused(false);
-    }
-  }, [isRunning]);
-
   const handlePauseClick = (e: React.MouseEvent) => {
     e.stopPropagation();
     setIsPaused(!isPaused);
@@ -57,22 +40,27 @@ export default function TimerPill({ duration, isRunning, timeRemaining, onStart,
   };
 
   const handleStartClick = () => {
-    if (timeRemaining === undefined) {
-      setIsPaused(false);
-      setIsExpanded(true);
-      onStart();
-    }
+    setIsPaused(false);
+    setIsExpanded(true);
+    onStart();
   };
 
   const handlePillClick = () => {
-    if (timeRemaining !== undefined) {
+    if (isRunning) {
       setIsExpanded(!isExpanded);
     } else {
       handleStartClick();
     }
   };
 
-  const isActive = timeRemaining !== undefined;
+  // Update states based on running state
+  useEffect(() => {
+    if (!isRunning) {
+      setIsPaused(false);
+      setIsExpanded(false);
+    }
+  }, [isRunning]);
+
   const showPauseIcon = isRunning && !isPaused;
 
   return (
@@ -84,18 +72,16 @@ export default function TimerPill({ duration, isRunning, timeRemaining, onStart,
         layout
         onClick={handlePillClick}
         className={`px-3 py-1 rounded-full cursor-pointer ${
-          isActive
+          isRunning
             ? isPaused
               ? 'bg-yellow-500/20 text-yellow-400'
-              : isRunning
-                ? 'bg-green-500/20 text-green-400'
-                : 'bg-blue-500/20 text-blue-400'
+              : 'bg-green-500/20 text-green-400'
             : 'bg-blue-500/20 text-blue-400 hover:bg-blue-500/30'
         }`}
       >
-        {isActive && isExpanded ? (
+        {isRunning && isExpanded ? (
           <div className="flex items-center justify-between">
-            <span>{formatTimeSeconds(timeRemaining || 0)}</span>
+            <span>{formatTimeSeconds(timeRemaining || duration * 60)}</span>
             <div className="flex gap-1 ml-2">
               <div
                 onClick={handlePauseClick}
@@ -126,8 +112,8 @@ export default function TimerPill({ duration, isRunning, timeRemaining, onStart,
           </div>
         ) : (
           <div className="flex items-center">
-            <span>{isActive ? formatTimeSeconds(timeRemaining || 0) : formatTime(duration)}</span>
-            {isActive && !isExpanded && (
+            <span>{isRunning ? formatTimeSeconds(timeRemaining || duration * 60) : formatTime(duration)}</span>
+            {isRunning && !isExpanded && (
               <svg className="w-4 h-4 ml-1 opacity-50" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
               </svg>
