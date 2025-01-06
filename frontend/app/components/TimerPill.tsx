@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import { motion } from 'framer-motion';
 
 interface TimerPillProps {
   duration: number;
@@ -11,6 +12,7 @@ interface TimerPillProps {
 
 export default function TimerPill({ duration, isRunning, timeRemaining, onStart, onPause, onStop }: TimerPillProps) {
   const [isPaused, setIsPaused] = useState(false);
+  const [isExpanded, setIsExpanded] = useState(false);
 
   const formatTime = (minutes: number) => {
     const hours = Math.floor(minutes / 60);
@@ -33,19 +35,30 @@ export default function TimerPill({ duration, isRunning, timeRemaining, onStart,
   const handleStopClick = (e: React.MouseEvent) => {
     e.stopPropagation();
     setIsPaused(false);
+    setIsExpanded(false);
     onStop();
   };
 
   const handleStartClick = () => {
     if (timeRemaining === undefined) {
       setIsPaused(false);
+      setIsExpanded(true);
       onStart();
+    }
+  };
+
+  const handlePillClick = () => {
+    if (timeRemaining !== undefined) {
+      setIsExpanded(!isExpanded);
+    } else {
+      handleStartClick();
     }
   };
 
   useEffect(() => {
     if (!isRunning && timeRemaining === undefined) {
       setIsPaused(false);
+      setIsExpanded(false);
     }
   }, [isRunning, timeRemaining]);
 
@@ -53,9 +66,13 @@ export default function TimerPill({ duration, isRunning, timeRemaining, onStart,
   const showPauseIcon = isRunning && !isPaused;
 
   return (
-    <div className={`relative group ${isActive ? 'w-48' : 'w-auto'}`}>
-      <div
-        onClick={handleStartClick}
+    <motion.div
+      layout
+      className={`relative group ${isExpanded ? 'w-40' : 'w-auto'}`}
+    >
+      <motion.div
+        layout
+        onClick={handlePillClick}
         className={`px-3 py-1 rounded-full cursor-pointer ${
           isActive
             ? isPaused
@@ -66,10 +83,10 @@ export default function TimerPill({ duration, isRunning, timeRemaining, onStart,
             : 'bg-blue-500/20 text-blue-400 hover:bg-blue-500/30'
         }`}
       >
-        {isActive ? (
+        {isActive && isExpanded ? (
           <div className="flex items-center justify-between">
             <span>{formatTimeSeconds(timeRemaining || 0)}</span>
-            <div className="flex gap-2">
+            <div className="flex gap-1 ml-2">
               <div
                 onClick={handlePauseClick}
                 className={`p-1 rounded-full cursor-pointer ${
@@ -98,9 +115,16 @@ export default function TimerPill({ duration, isRunning, timeRemaining, onStart,
             </div>
           </div>
         ) : (
-          formatTime(duration)
+          <div className="flex items-center">
+            <span>{isActive ? formatTimeSeconds(timeRemaining || 0) : formatTime(duration)}</span>
+            {isActive && !isExpanded && (
+              <svg className="w-4 h-4 ml-1 opacity-50" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+              </svg>
+            )}
+          </div>
         )}
-      </div>
-    </div>
+      </motion.div>
+    </motion.div>
   );
 } 

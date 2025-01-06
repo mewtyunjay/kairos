@@ -6,6 +6,7 @@ import TaskCard from './components/TaskCard'
 import Timer from './components/Timer'
 import { Task, TimerState } from './types'
 import { v4 as uuidv4 } from 'uuid'
+import { motion, AnimatePresence } from 'framer-motion'
 
 export default function Home() {
   const [tasks, setTasks] = useState<Task[]>([]);
@@ -236,9 +237,15 @@ export default function Home() {
     ));
   };
 
+  const handleReset = () => {
+    setHasStartedPlanning(false);
+    setTasks([]);
+    setUserInput('');
+  };
+
   return (
     <>
-      <Navbar />
+      <Navbar onReset={handleReset} />
       
       {isLoading && (
         <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50">
@@ -292,17 +299,27 @@ export default function Home() {
               </button>
             </div>
             
-            <div className="space-y-4">
-              {tasks.map((task) => (
-                <TaskCard
-                  key={task.id}
-                  task={task}
-                  onUpdate={handleTaskUpdate}
-                  onGenerateSubtasks={handleGenerateSubtasks}
-                  onTimerClick={handleTimerClick}
-                />
-              ))}
-            </div>
+            <motion.div layout className="space-y-4">
+              <AnimatePresence mode="popLayout">
+                {tasks
+                  .sort((a, b) => {
+                    if (a.isCompleted === b.isCompleted) {
+                      return a.priority - b.priority;
+                    }
+                    return a.isCompleted ? 1 : -1;
+                  })
+                  .map((task, index) => (
+                    <TaskCard
+                      key={task.id}
+                      task={task}
+                      index={index}
+                      onUpdate={handleTaskUpdate}
+                      onGenerateSubtasks={handleGenerateSubtasks}
+                      onTimerClick={handleTimerClick}
+                    />
+                  ))}
+              </AnimatePresence>
+            </motion.div>
           </div>
         )}
       </main>

@@ -58,16 +58,17 @@ async def plan(request: PlanRequest):
         raise HTTPException(status_code=400, detail="No prompt provided")
     
     try:
-        # Update the system prompt to focus on time estimation
         response = deepseek.get_completion(
             request.prompt,
             system_prompt="""
-            Analyze the user's tasks and break them down into main tasks with realistic time estimates.
-            For each task:
-            1. Provide a clear name and description
-            2. Estimate duration in minutes (most tasks should be 15-120 minutes)
-            3. Assign a priority from 1-5 (1 being highest)
-            4. Keep the total time realistic for a day's work (4-8 hours total)
+            Analyze the user's input and create tasks with realistic time estimates.
+            
+            Rules:
+            1. If the user specifies a time for a task (e.g., "write a blog in 5 hours"), use that exact time
+            2. Keep the task as a single unit if it's described as one task with a time specification
+            3. Only break into multiple tasks if the user lists multiple distinct tasks
+            4. For unspecified times, estimate based on task complexity (15-120 minutes)
+            5. Assign priority (1-5, 1 being highest) based on urgency or complexity
             
             Format each task as a JSON object with:
             {
@@ -77,7 +78,13 @@ async def plan(request: PlanRequest):
                 "priority": priority_number
             }
             
-            Return a list of these task objects.
+            Return a list of these task objects in a JSON object with a 'tasks' key.
+            
+            Examples:
+            - Input: "write a blog in 5 hours"
+              Output: One task with duration_minutes = 300
+            - Input: "write a blog and meet a friend"
+              Output: Two separate tasks with estimated durations
             """
         )
         

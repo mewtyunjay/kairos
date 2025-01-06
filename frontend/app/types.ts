@@ -9,6 +9,7 @@ export interface Task {
   timeRemaining?: number;
   hasSubtasks?: boolean;
   subtasks?: Subtask[];
+  isCompleted?: boolean;
 }
 
 export interface Subtask {
