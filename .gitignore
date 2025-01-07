@@ -31,6 +31,7 @@
 .env.*.local
 /frontend/.env*
 /backend/.env*
+frontend/.env.local
 
 # Dependencies
 **/node_modules/

@@ -3,13 +3,15 @@
 import { useState, useEffect } from 'react'
 import { default as Navbar } from './components/Navbar'
 import TaskCard from './components/TaskCard'
-import Timer from './components/Timer'
+import TimerPill from './components/TimerPill'
 import { Task, TimerState } from './types'
 import { v4 as uuidv4 } from 'uuid'
 import { motion, AnimatePresence } from 'framer-motion'
 import { config } from './config'
+import { useAuth } from '../contexts/AuthContext'
 
 export default function Home() {
+  const { user, loading, signIn } = useAuth()
   const [tasks, setTasks] = useState<Task[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [hasStartedPlanning, setHasStartedPlanning] = useState(false);
@@ -21,6 +23,7 @@ export default function Home() {
     timeRemaining: 0,
     isRunning: false
   });
+  const [isCompletedVisible, setIsCompletedVisible] = useState(false);
 
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
@@ -256,9 +259,33 @@ export default function Home() {
     setUserInput('');
   };
 
+  if (!loading && !user) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-gray-900">
+        <div className="text-center">
+          <h1 className="text-4xl font-bold text-white mb-8">Task Planner</h1>
+          <button
+            onClick={() => signIn()}
+            className="bg-blue-500 hover:bg-blue-600 text-white font-bold py-2 px-4 rounded"
+          >
+            Sign in with Google
+          </button>
+        </div>
+      </div>
+    )
+  }
+
+  if (loading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-gray-900">
+        <div className="text-white">Loading...</div>
+      </div>
+    )
+  }
+
   return (
     <>
-      <Navbar onReset={handleReset} />
+      <Navbar onReset={hasStartedPlanning ? handleReset : undefined} />
       
       {isLoading && (
         <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50">
@@ -302,37 +329,76 @@ export default function Home() {
           </div>
         ) : (
           <div className="max-w-4xl mx-auto space-y-6">
-            <div className="flex justify-between items-center">
+            {/* Active Tasks */}
+            <div className="space-y-4">
               <h2 className="text-2xl font-medium">Your Tasks</h2>
-              <button
-                onClick={() => setHasStartedPlanning(false)}
-                className="px-4 py-2 rounded-lg bg-zinc-800/50 hover:bg-zinc-700/50 transition-all"
-              >
-                Start Over
-              </button>
+              <motion.div layout className="space-y-4">
+                <AnimatePresence mode="popLayout">
+                  {tasks
+                    .filter(task => !task.isCompleted)
+                    .sort((a, b) => a.priority - b.priority)
+                    .map((task, index) => (
+                      <TaskCard
+                        key={task.id}
+                        task={task}
+                        index={index}
+                        onUpdate={handleTaskUpdate}
+                        onGenerateSubtasks={handleGenerateSubtasks}
+                        onTimerClick={handleTimerClick}
+                      />
+                    ))}
+                </AnimatePresence>
+              </motion.div>
             </div>
-            
-            <motion.div layout className="space-y-4">
-              <AnimatePresence mode="popLayout">
-                {tasks
-                  .sort((a, b) => {
-                    if (a.isCompleted === b.isCompleted) {
-                      return a.priority - b.priority;
-                    }
-                    return a.isCompleted ? 1 : -1;
-                  })
-                  .map((task, index) => (
-                    <TaskCard
-                      key={task.id}
-                      task={task}
-                      index={index}
-                      onUpdate={handleTaskUpdate}
-                      onGenerateSubtasks={handleGenerateSubtasks}
-                      onTimerClick={handleTimerClick}
+
+            {/* Completed Tasks */}
+            {tasks.some(task => task.isCompleted) && (
+              <div className="space-y-4">
+                <button
+                  onClick={() => setIsCompletedVisible(!isCompletedVisible)}
+                  className="flex items-center gap-2 text-2xl font-medium text-gray-400 hover:text-white transition-colors"
+                >
+                  <svg
+                    className={`w-6 h-6 transform transition-transform ${isCompletedVisible ? 'rotate-90' : ''}`}
+                    fill="none"
+                    stroke="currentColor"
+                    viewBox="0 0 24 24"
+                  >
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      strokeWidth={2}
+                      d="M9 5l7 7-7 7"
                     />
-                  ))}
-              </AnimatePresence>
-            </motion.div>
+                  </svg>
+                  Completed Tasks
+                </button>
+                
+                {isCompletedVisible && (
+                  <motion.div
+                    initial={{ opacity: 0, height: 0 }}
+                    animate={{ opacity: 1, height: 'auto' }}
+                    exit={{ opacity: 0, height: 0 }}
+                    className="space-y-4"
+                  >
+                    <AnimatePresence mode="popLayout">
+                      {tasks
+                        .filter(task => task.isCompleted)
+                        .map((task, index) => (
+                          <TaskCard
+                            key={task.id}
+                            task={task}
+                            index={index}
+                            onUpdate={handleTaskUpdate}
+                            onGenerateSubtasks={handleGenerateSubtasks}
+                            onTimerClick={handleTimerClick}
+                          />
+                        ))}
+                    </AnimatePresence>
+                  </motion.div>
+                )}
+              </div>
+            )}
           </div>
         )}
       </main>

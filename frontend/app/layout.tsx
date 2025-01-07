@@ -1,6 +1,7 @@
 import { JetBrains_Mono } from 'next/font/google'
 import './globals.css'
 import './styles/cards.css'
+import { AuthProvider } from '../contexts/AuthContext'
 
 const jetbrainsMono = JetBrains_Mono({ 
   subsets: ['latin'],
@@ -9,7 +10,7 @@ const jetbrainsMono = JetBrains_Mono({
 })
 
 export const metadata = {
-  title: 'Task Buddy',
+  title: 'Task Planner',
   description: 'A simple task management app',
 }
 
@@ -29,7 +30,11 @@ export default function RootLayout({
           `}
         </style>
       </head>
-      <body>{children}</body>
+      <body>
+        <AuthProvider>
+          {children}
+        </AuthProvider>
+      </body>
     </html>
   )
 }
