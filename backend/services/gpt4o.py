@@ -21,7 +21,7 @@ class GPT4oService:
         logger.info(f"Generating tasks for prompt: {prompt}")
         
         try:
-            logger.info("Sending request to GPT-4o")
+            logger.info("Sending request to GPT-4o mini")
             response = self.client.chat.completions.create(
                 model=self.model,
                 messages=[
@@ -69,7 +69,7 @@ class GPT4oService:
                 function_call={"name": "create_tasks"}
             )
             
-            logger.info("Received response from GPT-4o")
+            logger.info("Received response from GPT-4o mini")
             result = json.loads(response.choices[0].message.function_call.arguments)
             logger.info(f"Parsed {len(result['tasks'])} tasks:\n{json.dumps(result['tasks'], indent=2)}")
             return result['tasks']
@@ -81,7 +81,7 @@ class GPT4oService:
         logger.info(f"Generating subtasks for task: {task_name}")
         
         try:
-            logger.info("Sending request to GPT-4o for subtasks")
+            logger.info("Sending request to GPT-4o-mini for subtasks")
             response = self.client.chat.completions.create(
                 model=self.model,
                 messages=[
@@ -123,7 +123,7 @@ class GPT4oService:
                 function_call={"name": "create_subtasks"}
             )
             
-            logger.info("Received response from GPT-4o for subtasks")
+            logger.info("Received response from GPT-4o-mini for subtasks")
             result = json.loads(response.choices[0].message.function_call.arguments)
             logger.info(f"Parsed {len(result['subtasks'])} subtasks:\n{json.dumps(result['subtasks'], indent=2)}")
             return result['subtasks']
