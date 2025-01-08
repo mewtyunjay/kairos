@@ -17,60 +17,62 @@ class GPT4oService:
         self.max_tokens = 1000
         self.temperature = 0.7
 
-    def _parse_tasks(self, content: str) -> List[Dict[str, Any]]:
-        try:
-            # Log raw response
-            logger.info(f"Raw response from GPT-4o:\n{content}")
-            
-            # Extract the JSON part from the response
-            json_str = content.strip()
-            if "```json" in json_str:
-                json_str = json_str.split("```json")[1].split("```")[0]
-                logger.info(f"Extracted JSON string:\n{json_str}")
-            
-            tasks = json.loads(json_str)
-            logger.info(f"Parsed {len(tasks)} tasks:\n{json.dumps(tasks, indent=2)}")
-            return tasks
-        except Exception as e:
-            logger.error(f"Error parsing tasks: {e}")
-            return []
-
     def generate_tasks(self, prompt: str) -> List[Dict[str, Any]]:
         logger.info(f"Generating tasks for prompt: {prompt}")
         
-        system_prompt = """You are a task planning assistant. Given a user's goals for the day, break them down into specific tasks.
-        Each task should have:
-        - A clear name
-        - A detailed description
-        - Estimated duration in minutes
-        - Priority (1 being highest)
-        Return the response as a JSON array of tasks. Example format:
-        ```json
-        [
-            {
-                "name": "Task name",
-                "description": "Detailed description",
-                "duration_minutes": 30,
-                "priority": 1
-            }
-        ]
-        ```
-        Keep descriptions concise but informative. Prioritize tasks logically. 
-        IMPORTANT: Create exactly one task for each distinct activity mentioned by the user. Do not break down or combine activities unless explicitly requested."""
-
         try:
             logger.info("Sending request to GPT-4o")
             response = self.client.chat.completions.create(
                 model=self.model,
                 messages=[
-                    {"role": "system", "content": system_prompt},
+                    {"role": "system", "content": "You are a task planning assistant. Given a user's goals for the day, break them down into specific tasks. Create exactly one task for each distinct activity mentioned by the user. Do not break down or combine activities unless explicitly requested."},
                     {"role": "user", "content": prompt}
                 ],
-                max_tokens=self.max_tokens,
-                temperature=self.temperature
+                functions=[{
+                    "name": "create_tasks",
+                    "description": "Create a list of tasks based on user input",
+                    "parameters": {
+                        "type": "object",
+                        "properties": {
+                            "tasks": {
+                                "type": "array",
+                                "description": "List of tasks",
+                                "items": {
+                                    "type": "object",
+                                    "properties": {
+                                        "name": {
+                                            "type": "string",
+                                            "description": "Clear, concise task name"
+                                        },
+                                        "description": {
+                                            "type": "string",
+                                            "description": "Detailed description of what needs to be done"
+                                        },
+                                        "duration_minutes": {
+                                            "type": "integer",
+                                            "description": "Estimated duration in minutes"
+                                        },
+                                        "priority": {
+                                            "type": "integer",
+                                            "description": "Task priority (1 being highest)",
+                                            "minimum": 1,
+                                            "maximum": 5
+                                        }
+                                    },
+                                    "required": ["name", "description", "duration_minutes", "priority"]
+                                }
+                            }
+                        },
+                        "required": ["tasks"]
+                    }
+                }],
+                function_call={"name": "create_tasks"}
             )
+            
             logger.info("Received response from GPT-4o")
-            return self._parse_tasks(response.choices[0].message.content)
+            result = json.loads(response.choices[0].message.function_call.arguments)
+            logger.info(f"Parsed {len(result['tasks'])} tasks:\n{json.dumps(result['tasks'], indent=2)}")
+            return result['tasks']
         except Exception as e:
             logger.error(f"Error generating tasks: {e}")
             return []
@@ -78,36 +80,53 @@ class GPT4oService:
     def generate_subtasks(self, task_name: str, task_description: str, duration_minutes: int) -> List[Dict[str, Any]]:
         logger.info(f"Generating subtasks for task: {task_name}")
         
-        system_prompt = f"""Break down the following task into smaller subtasks:
-        Task: {task_name}
-        Description: {task_description}
-        Total Duration: {duration_minutes} minutes
-
-        Return the subtasks as a JSON array. Example format:
-        ```json
-        [
-            {{
-                "name": "Subtask name",
-                "description": "Detailed description",
-                "duration_minutes": 15
-            }}
-        ]
-        ```
-        Ensure the sum of subtask durations equals the total task duration."""
-
         try:
             logger.info("Sending request to GPT-4o for subtasks")
             response = self.client.chat.completions.create(
                 model=self.model,
                 messages=[
-                    {"role": "system", "content": system_prompt},
-                    {"role": "user", "content": f"Break down this task into subtasks: {task_name}"}
+                    {"role": "system", "content": "You are a task breakdown assistant. Break down the given task into smaller, manageable subtasks."},
+                    {"role": "user", "content": f"Break down this task into subtasks:\nTask: {task_name}\nDescription: {task_description}\nTotal Duration: {duration_minutes} minutes"}
                 ],
-                max_tokens=self.max_tokens,
-                temperature=self.temperature
+                functions=[{
+                    "name": "create_subtasks",
+                    "description": "Create a list of subtasks that add up to the main task's duration",
+                    "parameters": {
+                        "type": "object",
+                        "properties": {
+                            "subtasks": {
+                                "type": "array",
+                                "description": "List of subtasks that make up the main task",
+                                "items": {
+                                    "type": "object",
+                                    "properties": {
+                                        "name": {
+                                            "type": "string",
+                                            "description": "Clear, concise subtask name"
+                                        },
+                                        "description": {
+                                            "type": "string",
+                                            "description": "Detailed description of what needs to be done"
+                                        },
+                                        "duration_minutes": {
+                                            "type": "integer",
+                                            "description": "Estimated duration in minutes (should be between 5-30 minutes)"
+                                        }
+                                    },
+                                    "required": ["name", "description", "duration_minutes"]
+                                }
+                            }
+                        },
+                        "required": ["subtasks"]
+                    }
+                }],
+                function_call={"name": "create_subtasks"}
             )
+            
             logger.info("Received response from GPT-4o for subtasks")
-            return self._parse_tasks(response.choices[0].message.content)
+            result = json.loads(response.choices[0].message.function_call.arguments)
+            logger.info(f"Parsed {len(result['subtasks'])} subtasks:\n{json.dumps(result['subtasks'], indent=2)}")
+            return result['subtasks']
         except Exception as e:
             logger.error(f"Error generating subtasks: {e}")
             return [] 
