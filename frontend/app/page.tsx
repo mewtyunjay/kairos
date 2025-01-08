@@ -421,7 +421,7 @@ export default function Home() {
 
   return (
     <>
-      <Navbar onReset={hasStartedPlanning ? handleReset : undefined} onSigningOut={setIsSigningOut} />
+      <Navbar onSigningOut={setIsSigningOut} />
       
       {(isLoading || isSigningOut) && (
         <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50">
@@ -495,7 +495,18 @@ export default function Home() {
           <div className="max-w-4xl mx-auto space-y-6">
             {/* Active Tasks */}
             <div className="space-y-4">
-              <h2 className="text-2xl font-medium">Your Tasks</h2>
+              <div className="flex justify-between items-center">
+                <h2 className="text-2xl font-medium">Your Tasks</h2>
+                <button
+                  onClick={handleReset}
+                  className="text-sm px-4 py-2 rounded-lg bg-gray-800 hover:bg-gray-700 text-gray-300 transition-all flex items-center gap-2"
+                >
+                  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" className="w-4 h-4">
+                    <path d="M10.75 4.75a.75.75 0 00-1.5 0v4.5h-4.5a.75.75 0 000 1.5h4.5v4.5a.75.75 0 001.5 0v-4.5h4.5a.75.75 0 000-1.5h-4.5v-4.5z" />
+                  </svg>
+                  New Plan
+                </button>
+              </div>
               <motion.div layout className="space-y-4">
                 <AnimatePresence mode="popLayout">
                   {tasks

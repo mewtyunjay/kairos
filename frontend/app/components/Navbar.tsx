@@ -3,11 +3,10 @@
 import { useAuth } from '../../contexts/AuthContext'
 
 interface NavbarProps {
-  onReset?: () => void
   onSigningOut?: (isSigningOut: boolean) => void
 }
 
-export default function Navbar({ onReset, onSigningOut }: NavbarProps) {
+export default function Navbar({ onSigningOut }: NavbarProps) {
   const { user, signOut } = useAuth()
 
   const handleSignOut = async () => {
@@ -30,14 +29,6 @@ export default function Navbar({ onReset, onSigningOut }: NavbarProps) {
             {user && (
               <>
                 <span className="text-sm text-gray-300">{user.email}</span>
-                {onReset && (
-                  <button
-                    onClick={onReset}
-                    className="text-sm px-3 py-1.5 rounded-lg bg-gray-800 hover:bg-gray-700 text-gray-300 transition-all"
-                  >
-                    New Plan
-                  </button>
-                )}
                 <button
                   onClick={handleSignOut}
                   className="text-sm px-3 py-1.5 rounded-lg bg-red-500/10 hover:bg-red-500/20 text-red-500 transition-all"
