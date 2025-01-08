@@ -261,16 +261,95 @@ export default function Home() {
 
   if (!loading && !user) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-gray-900">
-        <div className="text-center">
-          <h1 className="text-4xl font-bold text-white mb-8">Task Planner</h1>
-          <button
-            onClick={() => signIn()}
-            className="bg-blue-500 hover:bg-blue-600 text-white font-bold py-2 px-4 rounded"
-          >
-            Sign in with Google
-          </button>
+      <div className="min-h-screen bg-gradient-to-b from-gray-900 via-gray-800 to-black text-white">
+        {/* Hero Section */}
+        <div className="relative overflow-hidden">
+          {/* Background Pattern */}
+          <div className="absolute inset-0 bg-[url('/grid.svg')] bg-center [mask-image:linear-gradient(180deg,white,rgba(255,255,255,0))]" />
+          
+          <div className="relative pt-24 pb-16 sm:pt-32 sm:pb-24">
+            <div className="mx-auto max-w-7xl px-6 lg:px-8">
+              <div className="mx-auto max-w-2xl text-center">
+                <h1 className="text-4xl font-bold tracking-tight sm:text-6xl bg-clip-text text-transparent bg-gradient-to-r from-blue-500 to-teal-400">
+                  ActionFlow
+                </h1>
+                <p className="mt-6 text-lg leading-8 text-gray-300">
+                Turn brain fog into clear, doable steps.
+                </p>
+                <div className="mt-10 flex items-center justify-center gap-x-6">
+                  <button
+                    onClick={() => signIn()}
+                    className="rounded-xl bg-blue-500 px-8 py-4 text-sm font-semibold text-white shadow-sm hover:bg-blue-400 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-blue-400 transition-all duration-200"
+                  >
+                    Get Started with Google
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
         </div>
+
+        {/* Features Section */}
+        <div className="mx-auto max-w-7xl px-6 lg:px-8 py-24">
+          <div className="mx-auto max-w-2xl lg:text-center">
+            <h2 className="text-base font-semibold leading-7 text-blue-400">Start Making Progress</h2>
+            <p className="mt-2 text-3xl font-bold tracking-tight text-white sm:text-4xl">
+              Everything you need to take action
+            </p>
+            <p className="mt-6 text-lg leading-8 text-gray-300">
+              Stop feeling overwhelmed by your tasks. ActionFlow helps you break down your goals into manageable steps.
+            </p>
+          </div>
+          <div className="mx-auto mt-16 max-w-2xl sm:mt-20 lg:mt-24 lg:max-w-none">
+            <dl className="grid max-w-xl grid-cols-1 gap-x-8 gap-y-16 lg:max-w-none lg:grid-cols-3">
+              <div className="flex flex-col">
+                <dt className="flex items-center gap-x-3 text-xl font-semibold leading-7 text-white">
+                  <svg className="h-5 w-5 flex-none text-blue-400" viewBox="0 0 20 20" fill="currentColor">
+                    <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.857-9.809a.75.75 0 00-1.214-.882l-3.483 4.79-1.88-1.88a.75.75 0 10-1.06 1.061l2.5 2.5a.75.75 0 001.137-.089l4-5.5z" clipRule="evenodd" />
+                  </svg>
+                  AI-Powered Planning
+                </dt>
+                <dd className="mt-4 flex flex-auto flex-col text-base leading-7 text-gray-400">
+                  <p className="flex-auto">Our AI breaks down your goals into clear, achievable tasks with estimated durations.</p>
+                </dd>
+              </div>
+              <div className="flex flex-col">
+                <dt className="flex items-center gap-x-3 text-xl font-semibold leading-7 text-white">
+                  <svg className="h-5 w-5 flex-none text-blue-400" viewBox="0 0 20 20" fill="currentColor">
+                    <path d="M5.433 13.917l1.262-3.155A4 4 0 017.58 9.42l6.92-6.918a2.121 2.121 0 013 3l-6.92 6.918c-.383.383-.84.685-1.343.886l-3.154 1.262a.5.5 0 01-.65-.65z" />
+                    <path d="M3.5 5.75c0-.69.56-1.25 1.25-1.25H10A.75.75 0 0010 3H4.75A2.75 2.75 0 002 5.75v9.5A2.75 2.75 0 004.75 18h9.5A2.75 2.75 0 0017 15.25V10a.75.75 0 00-1.5 0v5.25c0 .69-.56 1.25-1.25 1.25h-9.5c-.69 0-1.25-.56-1.25-1.25v-9.5z" />
+                  </svg>
+                  Smart Subtasks
+                </dt>
+                <dd className="mt-4 flex flex-auto flex-col text-base leading-7 text-gray-400">
+                  <p className="flex-auto">Break down complex tasks into smaller, manageable subtasks automatically.</p>
+                </dd>
+              </div>
+              <div className="flex flex-col">
+                <dt className="flex items-center gap-x-3 text-xl font-semibold leading-7 text-white">
+                  <svg className="h-5 w-5 flex-none text-blue-400" viewBox="0 0 20 20" fill="currentColor">
+                    <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm.75-13a.75.75 0 00-1.5 0v5c0 .414.336.75.75.75h4a.75.75 0 000-1.5h-3.25V5z" clipRule="evenodd" />
+                  </svg>
+                  Built-in Timer
+                </dt>
+                <dd className="mt-4 flex flex-auto flex-col text-base leading-7 text-gray-400">
+                  <p className="flex-auto">Stay focused with our integrated timer that helps you track progress on each task.</p>
+                </dd>
+              </div>
+            </dl>
+          </div>
+        </div>
+
+        {/* Footer */}
+        <footer className="mt-auto py-12">
+          <div className="mx-auto max-w-7xl px-6 lg:px-8">
+            <div className="border-t border-gray-800 pt-8">
+              <p className="text-center text-sm leading-5 text-gray-400">
+                © 2024 ActionFlow. All rights reserved.
+              </p>
+            </div>
+          </div>
+        </footer>
       </div>
     )
   }
