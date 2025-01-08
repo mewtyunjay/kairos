@@ -1,6 +1,5 @@
-fastapi
-uvicorn
-anthropic
-python-dotenv
-pydantic
-openai==1.12.0
+fastapi==0.104.1
+uvicorn==0.24.0
+pydantic==2.5.2
+openai==1.3.7
+python-dotenv==1.0.0
