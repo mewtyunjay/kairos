@@ -4,10 +4,18 @@ import { useAuth } from '../../contexts/AuthContext'
 
 interface NavbarProps {
   onReset?: () => void
+  onSigningOut?: (isSigningOut: boolean) => void
 }
 
-export default function Navbar({ onReset }: NavbarProps) {
+export default function Navbar({ onReset, onSigningOut }: NavbarProps) {
   const { user, signOut } = useAuth()
+
+  const handleSignOut = async () => {
+    if (onSigningOut) {
+      onSigningOut(true);
+    }
+    await signOut();
+  };
 
   return (
     <nav className="bg-gray-900/50 backdrop-blur-sm border-b border-gray-800/50">
@@ -31,7 +39,7 @@ export default function Navbar({ onReset }: NavbarProps) {
                   </button>
                 )}
                 <button
-                  onClick={() => signOut()}
+                  onClick={handleSignOut}
                   className="text-sm px-3 py-1.5 rounded-lg bg-red-500/10 hover:bg-red-500/20 text-red-500 transition-all"
                 >
                   Sign Out
