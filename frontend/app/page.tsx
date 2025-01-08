@@ -325,17 +325,18 @@ export default function Home() {
             <div className="mx-auto max-w-7xl px-6 lg:px-8">
               <div className="mx-auto max-w-2xl text-center">
                 <h1 className="text-4xl font-bold tracking-tight sm:text-6xl bg-clip-text text-transparent bg-gradient-to-r from-blue-500 to-teal-400">
-                  ActionFlow
+                  Kairos
                 </h1>
                 <p className="mt-6 text-lg leading-8 text-gray-300">
-                  Turn brain fog into clear, actionable tasks daily.
+                  Turn brain fog into clear, actionable daily tasks.
                 </p>
                 <div className="mt-10 flex items-center justify-center gap-x-6">
                   <button
                     onClick={() => signIn()}
-                    className="rounded-xl bg-blue-500 px-8 py-4 text-lg font-semibold text-white shadow-sm hover:bg-blue-400 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-blue-400 transition-all duration-200"
+                    className="rounded-xl bg-blue-500 px-8 py-4 text-lg font-semibold text-white shadow-sm hover:bg-blue-400 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-blue-400 transition-all duration-200 flex items-center"
                   >
-                    Login with Google
+                    <img src="https://www.google.com/favicon.ico" alt="Google Favicon" className="h-5 w-5 mr-2" />
+                    Login with Google 
                   </button>
                 </div>
               </div>
@@ -386,12 +387,12 @@ export default function Home() {
         {/* Why Section */}
         <div className="mx-auto max-w-7xl px-6 lg:px-8 py-24">
           <div className="text-center">
-            <h2 className="text-2xl font-semibold leading-7 text-blue-400">Why ActionFlow?</h2>
-            <p className="mt-2 text-4xl font-bold tracking-tight text-white sm:text-5xl max-w-3xl mx-auto">
-              Overcome the friction between planning and action
+            <h2 className="text-2xl font-semibold leading-7 text-blue-400">Why Kairos?</h2>
+            <p className="mt-2 text-2xl font-bold tracking-tight text-white sm:text-3xl max-w-3xl mx-auto">
+              Bridge the gap between planning and action
             </p>
             
-            <p className="mt-16 text-xl font-medium text-white max-w-4xl mx-auto leading-relaxed">
+            <p className="mt-16 text-x font-medium text-white max-w-4xl mx-auto leading-relaxed">
               You know your goals, but juggling the big picture and small details can be overwhelming. Let us handle the mental load and break down your goals, giving you a clear roadmap instead of getting stuck in analysis paralysis.
             </p>
           </div>
@@ -402,7 +403,7 @@ export default function Home() {
           <div className="mx-auto max-w-7xl px-6 lg:px-8">
             <div className="border-t border-gray-800 pt-8">
               <p className="text-center text-sm leading-5 text-gray-400">
-                built by <a href="https://x.com/mewtyunjay" className="text-blue-400 hover:text-blue-300 transition-colors">@mewtyunjay</a>
+                built by <a href="https://x.com/mewtyunjay" className="text-blue-400 hover:text-blue-300 transition-colors">mewtyunjay</a>
               </p>
             </div>
           </div>
