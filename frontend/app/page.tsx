@@ -328,7 +328,7 @@ export default function Home() {
                   ActionFlow
                 </h1>
                 <p className="mt-6 text-lg leading-8 text-gray-300">
-                  Turn brain fog into clear, actionable tasks.
+                  Turn brain fog into clear, actionable tasks daily.
                 </p>
                 <div className="mt-10 flex items-center justify-center gap-x-6">
                   <button
@@ -402,7 +402,7 @@ export default function Home() {
           <div className="mx-auto max-w-7xl px-6 lg:px-8">
             <div className="border-t border-gray-800 pt-8">
               <p className="text-center text-sm leading-5 text-gray-400">
-                © 2024 ActionFlow. All rights reserved.
+                built by <a href="https://x.com/mewtyunjay" className="text-blue-400 hover:text-blue-300 transition-colors">@mewtyunjay</a>
               </p>
             </div>
           </div>
