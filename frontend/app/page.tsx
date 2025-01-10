@@ -4,16 +4,23 @@ import { useState, useEffect, useRef } from 'react'
 import { default as Navbar } from './components/Navbar'
 import TaskCard from './components/TaskCard'
 import TimerPill from './components/TimerPill'
-import { Task, TimerState } from './types'
+import { Task, TimerState, Subtask } from './types'
 import { v4 as uuidv4 } from 'uuid'
 import { motion, AnimatePresence } from 'framer-motion'
 import { config } from './config'
 import { useAuth } from '../contexts/AuthContext'
+import { useApi } from '../hooks/useApi'
 
 export default function Home() {
   const { user, loading, signIn } = useAuth()
+  const { updateTaskCompletion, updateSubtaskCompletion, createTask, createSubtask, getTodaysTasks } = useApi()
   const [tasks, setTasks] = useState<Task[]>([]);
-  const [isLoading, setIsLoading] = useState(false);
+  const [pendingUpdates, setPendingUpdates] = useState<{
+    taskId: string;
+    subtaskId?: string;
+    is_completed: boolean;
+  }[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
   const [isSigningOut, setIsSigningOut] = useState(false);
   const [hasStartedPlanning, setHasStartedPlanning] = useState(false);
   const [userInput, setUserInput] = useState('');
@@ -41,20 +48,70 @@ export default function Home() {
   }, [userInput, hasStartedPlanning]);
 
   useEffect(() => {
-    const savedTasks = localStorage.getItem('tasks');
-    const savedUserInput = localStorage.getItem('userInput');
-    const savedHasStartedPlanning = localStorage.getItem('hasStartedPlanning');
+    const loadUserTasks = async () => {
+      if (!user) {
+        setIsLoading(false);
+        setTasks([]);
+        setHasStartedPlanning(false);
+        return;
+      }
+      
+      try {
+        setIsLoading(true);
+        console.log('Loading tasks for user:', user.id, 'auth status:', !!user);
+        const userTasks = await getTodaysTasks(user.id);
+        console.log('Loaded tasks:', userTasks?.length || 0, 'tasks');
+        
+        if (Array.isArray(userTasks) && userTasks.length > 0) {
+          console.log('User has tasks for today, showing tasks page');
+          setTasks(userTasks);
+          setHasStartedPlanning(true);
+          // Clear any saved planning state since we have tasks
+          localStorage.removeItem(`userInput_${user.id}`);
+          localStorage.removeItem(`hasStartedPlanning_${user.id}`);
+        } else {
+          console.log('No tasks found for today, checking saved state');
+          setTasks([]);
+          // Only restore saved state if we don't have tasks
+          const savedUserInput = localStorage.getItem(`userInput_${user.id}`);
+          const savedHasStartedPlanning = localStorage.getItem(`hasStartedPlanning_${user.id}`);
+          if (savedUserInput) {
+            console.log('Restoring saved user input');
+            setUserInput(savedUserInput);
+          }
+          if (savedHasStartedPlanning) {
+            console.log('Restoring saved planning state');
+            setHasStartedPlanning(JSON.parse(savedHasStartedPlanning));
+          } else {
+            console.log('No saved state found, showing planning page');
+            setHasStartedPlanning(false);
+          }
+        }
+      } catch (error) {
+        console.error('Error loading user tasks:', {
+          error,
+          errorMessage: error instanceof Error ? error.message : 'Unknown error',
+          errorStack: error instanceof Error ? error.stack : undefined,
+          userId: user.id,
+          authStatus: !!user
+        });
+        // On error, reset to initial state
+        setTasks([]);
+        setHasStartedPlanning(false);
+      } finally {
+        setIsLoading(false);
+      }
+    };
 
-    if (savedTasks) setTasks(JSON.parse(savedTasks));
-    if (savedUserInput) setUserInput(savedUserInput);
-    if (savedHasStartedPlanning) setHasStartedPlanning(JSON.parse(savedHasStartedPlanning));
-  }, []);
+    // Reset state when user changes
+    if (!user) {
+      setTasks([]);
+      setHasStartedPlanning(false);
+      setUserInput('');
+    }
 
-  useEffect(() => {
-    localStorage.setItem('tasks', JSON.stringify(tasks));
-    localStorage.setItem('userInput', userInput);
-    localStorage.setItem('hasStartedPlanning', JSON.stringify(hasStartedPlanning));
-  }, [tasks, userInput, hasStartedPlanning]);
+    loadUserTasks();
+  }, [user, getTodaysTasks]);
 
   useEffect(() => {
     let interval: NodeJS.Timeout;
@@ -89,17 +146,34 @@ export default function Home() {
   }, [timerState.isRunning, timerState.taskId]);
 
   const handlePlanDay = async () => {
-    if (!userInput.trim()) return;
+    if (!userInput.trim() || !user) return;
     
     setIsLoading(true)
     
     try {
+      // Get today's date in local timezone
+      const today = new Date();
+      const localDate = today.toLocaleDateString('en-US', {
+        year: 'numeric',
+        month: '2-digit',
+        day: '2-digit',
+        timeZone: Intl.DateTimeFormat().resolvedOptions().timeZone
+      }).split('/').reverse();
+      // Format as YYYY-MM-DD
+      const formattedDate = `${localDate[0]}-${localDate[1].padStart(2, '0')}-${localDate[2].padStart(2, '0')}`;
+      
+      console.log('Creating tasks for date:', formattedDate, 'in timezone:', Intl.DateTimeFormat().resolvedOptions().timeZone);
+
       const response = await fetch(`${config.apiBaseUrl}/api/plan`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify({ prompt: userInput }),
+        body: JSON.stringify({ 
+          prompt: userInput,
+          user_id: user.id,
+          date: formattedDate
+        }),
       });
 
       if (!response.ok) {
@@ -114,16 +188,46 @@ export default function Home() {
         throw new Error('Invalid response from server');
       }
 
+      // Tasks are already saved in Supabase by the backend
       setTasks(data.tasks);
       setHasStartedPlanning(true);
     } catch (error) {
-      console.error('Error planning tasks:', error);
+      console.error('Error planning tasks:', {
+        error,
+        errorMessage: error instanceof Error ? error.message : 'Unknown error',
+        errorStack: error instanceof Error ? error.stack : undefined
+      });
     } finally {
       setIsLoading(false);
     }
   };
 
-  const handleTaskUpdate = (updatedTask: Task) => {
+  const handleTaskUpdate = async (updatedTask: Task) => {
+    // If completion status has changed, add to pending updates
+    const existingTask = tasks.find(t => t.id === updatedTask.id);
+    if (existingTask && existingTask.is_completed !== updatedTask.is_completed) {
+      // Add task update
+      const updates = [{
+        taskId: updatedTask.id,
+        is_completed: updatedTask.is_completed || false
+      }];
+      
+      // Add subtask updates if task has subtasks
+      const subtasks = updatedTask.subtasks || [];
+      if (subtasks.length > 0) {
+        updates.push(
+          ...subtasks.map(subtask => ({
+            taskId: updatedTask.id,
+            subtaskId: subtask.id,
+            is_completed: updatedTask.is_completed || false
+          }))
+        );
+      }
+
+      setPendingUpdates(prev => [...prev, ...updates]);
+    }
+
+    // Update local state
     setTasks(prev => prev.map(task => 
       task.id === updatedTask.id ? updatedTask : task
     ));
@@ -156,13 +260,54 @@ export default function Home() {
 
       const data = await response.json();
       
+      // Save subtasks to Supabase
+      const savedSubtasks = await Promise.all(
+        data.subtasks.map(async (subtask: Subtask) => {
+          try {
+            console.log('Attempting to save subtask:', {
+              task_id: taskId,
+              name: subtask.name,
+              description: subtask.description,
+              duration_minutes: subtask.duration_minutes,
+            });
+
+            const savedSubtask = await createSubtask({
+              task_id: taskId,
+              name: subtask.name,
+              description: subtask.description,
+              duration_minutes: subtask.duration_minutes,
+            });
+
+            console.log('Subtask saved successfully:', savedSubtask);
+            return { ...subtask, id: savedSubtask.id };
+          } catch (error) {
+            console.error('Error saving subtask to database:', {
+              error,
+              errorMessage: error instanceof Error ? error.message : 'Unknown error',
+              errorStack: error instanceof Error ? error.stack : undefined,
+              subtask: {
+                task_id: taskId,
+                name: subtask.name,
+                description: subtask.description,
+                duration_minutes: subtask.duration_minutes,
+              }
+            });
+            return subtask;
+          }
+        })
+      );
+
       setTasks(prev => prev.map(t => 
         t.id === taskId
-          ? { ...t, subtasks: data.subtasks, hasSubtasks: true }
+          ? { ...t, subtasks: savedSubtasks, hasSubtasks: true }
           : t
       ));
     } catch (error) {
-      console.error('Error generating subtasks:', error);
+      console.error('Error generating subtasks:', {
+        error,
+        errorMessage: error instanceof Error ? error.message : 'Unknown error',
+        errorStack: error instanceof Error ? error.stack : undefined
+      });
     } finally {
       setIsLoading(false);
     }
@@ -249,17 +394,41 @@ export default function Home() {
               ...s,
               isTimerRunning: false,
               timeRemaining: s.duration_minutes * 60,
-              isCompleted: s.id === subtaskId ? true : s.isCompleted
+              is_completed: s.id === subtaskId ? true : s.is_completed
             }))
           }
         : t
     ));
   };
 
-  const handleReset = () => {
+  const handleReset = async () => {
+    // Save any pending updates before resetting
+    if (pendingUpdates.length > 0) {
+      try {
+        await Promise.all(
+          pendingUpdates.map(async (update) => {
+            if (update.subtaskId) {
+              await updateSubtaskCompletion(update.subtaskId, update.is_completed);
+            } else {
+              await updateTaskCompletion(update.taskId, update.is_completed);
+            }
+          })
+        );
+        setPendingUpdates([]);
+      } catch (error) {
+        console.error('Error saving completion updates:', error);
+      }
+    }
+
     setHasStartedPlanning(false);
     setTasks([]);
     setUserInput('');
+    
+    // Clear user-specific localStorage
+    if (user) {
+      localStorage.removeItem(`userInput_${user.id}`);
+      localStorage.removeItem(`hasStartedPlanning_${user.id}`);
+    }
   };
 
   const startSpeechRecognition = async () => {
@@ -312,6 +481,35 @@ export default function Home() {
       setIsRecording(false);
     }
   };
+
+  // Add effect to save pending updates when user leaves or resets
+  useEffect(() => {
+    const savePendingUpdates = async () => {
+      if (pendingUpdates.length === 0) return;
+
+      try {
+        await Promise.all(
+          pendingUpdates.map(async (update) => {
+            if (update.subtaskId) {
+              await updateSubtaskCompletion(update.subtaskId, update.is_completed);
+            } else {
+              await updateTaskCompletion(update.taskId, update.is_completed);
+            }
+          })
+        );
+        setPendingUpdates([]);
+      } catch (error) {
+        console.error('Error saving completion updates:', error);
+      }
+    };
+
+    // Save updates when component unmounts
+    window.addEventListener('beforeunload', savePendingUpdates);
+    return () => {
+      window.removeEventListener('beforeunload', savePendingUpdates);
+      savePendingUpdates();
+    };
+  }, [pendingUpdates, updateTaskCompletion, updateSubtaskCompletion]);
 
   if (!loading && !user) {
     return (
@@ -412,7 +610,7 @@ export default function Home() {
     )
   }
 
-  if (loading) {
+  if (loading || isLoading) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-gray-900">
         <div className="text-white">Loading...</div>
@@ -521,7 +719,7 @@ export default function Home() {
               <motion.div layout className="space-y-4">
                 <AnimatePresence mode="popLayout">
                   {tasks
-                    .filter(task => !task.isCompleted)
+                    .filter(task => !task.is_completed)
                     .sort((a, b) => a.priority - b.priority)
                     .map((task, index) => (
                       <TaskCard
@@ -538,7 +736,7 @@ export default function Home() {
             </div>
 
             {/* Completed Tasks */}
-            {tasks.some(task => task.isCompleted) && (
+            {tasks.some(task => task.is_completed) && (
               <div className="space-y-4">
                 <button
                   onClick={() => setIsCompletedVisible(!isCompletedVisible)}
@@ -569,7 +767,7 @@ export default function Home() {
                   >
                     <AnimatePresence mode="popLayout">
                       {tasks
-                        .filter(task => task.isCompleted)
+                        .filter(task => task.is_completed)
                         .map((task, index) => (
                           <TaskCard
                             key={task.id}
