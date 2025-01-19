@@ -110,7 +110,9 @@ async def plan(request: PlanRequest):
                     saved_tasks.append({
                         **task_data,
                         "id": saved_task["id"],
-                        "is_completed": False
+                        "is_completed": False,
+                        "user_id": request.user_id,
+                        "date": request.date
                     })
                 else:
                     logger.error(f"No data returned when saving task: {task_to_save}")
@@ -134,34 +136,19 @@ async def generate_subtasks(request: GenerateSubtasksRequest):
             request.duration_minutes
         )
         
-        # Save subtasks to Supabase and collect their IDs
-        saved_subtasks = []
+        # Return generated subtasks without saving to database
+        generated_subtasks = []
         for subtask_data in subtasks_data:
-            subtask_to_save = {
+            generated_subtasks.append({
+                "id": str(uuid.uuid4()),  # Generate a local ID
                 "task_id": request.task_id,
                 "name": subtask_data["name"],
                 "description": subtask_data["description"],
                 "duration_minutes": subtask_data["duration_minutes"],
                 "is_completed": False
-            }
-            
-            try:
-                result = supabase.table("subtasks").insert(subtask_to_save).execute()
-                if result.data:
-                    saved_subtask = result.data[0]
-                    saved_subtasks.append({
-                        **subtask_data,
-                        "id": saved_subtask["id"],
-                        "is_completed": False
-                    })
-                else:
-                    logger.error(f"No data returned when saving subtask: {subtask_to_save}")
-                    raise HTTPException(status_code=500, detail="Failed to save subtask")
-            except Exception as e:
-                logger.error(f"Error saving subtask to Supabase: {str(e)}")
-                raise HTTPException(status_code=500, detail=f"Database error: {str(e)}")
+            })
         
-        return {"subtasks": saved_subtasks}
+        return {"subtasks": generated_subtasks}
     except Exception as e:
         logger.error(f"Error in generate_subtasks endpoint: {str(e)}")
         raise HTTPException(status_code=500, detail=str(e))

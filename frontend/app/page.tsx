@@ -50,28 +50,50 @@ export default function Home() {
   useEffect(() => {
     const loadUserTasks = async () => {
       if (!user) {
+        console.log('No user found, skipping task load');
         setIsLoading(false);
         setTasks([]);
         setHasStartedPlanning(false);
+        setPendingUpdates([]);
+        setUserInput('');
+        setTimerState({
+          taskId: null,
+          subtaskId: null,
+          startTime: null,
+          timeRemaining: 0,
+          isRunning: false
+        });
+        setIsCompletedVisible(false);
         return;
       }
       
       try {
         setIsLoading(true);
-        console.log('Loading tasks for user:', user.id, 'auth status:', !!user);
+        console.log('Loading tasks for user:', {
+          userId: user.id,
+          email: user.email,
+          authStatus: 'authenticated'
+        });
+
         const userTasks = await getTodaysTasks(user.id);
-        console.log('Loaded tasks:', userTasks?.length || 0, 'tasks');
         
         if (Array.isArray(userTasks) && userTasks.length > 0) {
-          console.log('User has tasks for today, showing tasks page');
+          console.log('Found tasks for today:', {
+            count: userTasks.length,
+            userId: user.id
+          });
           setTasks(userTasks);
           setHasStartedPlanning(true);
           // Clear any saved planning state since we have tasks
           localStorage.removeItem(`userInput_${user.id}`);
           localStorage.removeItem(`hasStartedPlanning_${user.id}`);
         } else {
-          console.log('No tasks found for today, checking saved state');
+          console.log('No tasks found for today:', {
+            userId: user.id,
+            authStatus: 'authenticated'
+          });
           setTasks([]);
+          setPendingUpdates([]);
           // Only restore saved state if we don't have tasks
           const savedUserInput = localStorage.getItem(`userInput_${user.id}`);
           const savedHasStartedPlanning = localStorage.getItem(`hasStartedPlanning_${user.id}`);
@@ -93,11 +115,14 @@ export default function Home() {
           errorMessage: error instanceof Error ? error.message : 'Unknown error',
           errorStack: error instanceof Error ? error.stack : undefined,
           userId: user.id,
-          authStatus: !!user
+          email: user.email,
+          authStatus: 'authenticated'
         });
         // On error, reset to initial state
         setTasks([]);
         setHasStartedPlanning(false);
+        setPendingUpdates([]);
+        setUserInput('');
       } finally {
         setIsLoading(false);
       }
@@ -105,9 +130,25 @@ export default function Home() {
 
     // Reset state when user changes
     if (!user) {
+      console.log('User logged out, clearing state');
       setTasks([]);
       setHasStartedPlanning(false);
       setUserInput('');
+      setPendingUpdates([]);
+      setTimerState({
+        taskId: null,
+        subtaskId: null,
+        startTime: null,
+        timeRemaining: 0,
+        isRunning: false
+      });
+      setIsCompletedVisible(false);
+    } else {
+      console.log('User state changed:', {
+        userId: user.id,
+        email: user.email,
+        authStatus: 'authenticated'
+      });
     }
 
     loadUserTasks();
@@ -153,14 +194,10 @@ export default function Home() {
     try {
       // Get today's date in local timezone
       const today = new Date();
-      const localDate = today.toLocaleDateString('en-US', {
-        year: 'numeric',
-        month: '2-digit',
-        day: '2-digit',
-        timeZone: Intl.DateTimeFormat().resolvedOptions().timeZone
-      }).split('/').reverse();
-      // Format as YYYY-MM-DD
-      const formattedDate = `${localDate[0]}-${localDate[1].padStart(2, '0')}-${localDate[2].padStart(2, '0')}`;
+      const year = today.getFullYear();
+      const month = String(today.getMonth() + 1).padStart(2, '0'); // Add 1 because months are 0-indexed
+      const day = String(today.getDate()).padStart(2, '0');
+      const formattedDate = `${year}-${month}-${day}`;
       
       console.log('Creating tasks for date:', formattedDate, 'in timezone:', Intl.DateTimeFormat().resolvedOptions().timeZone);
 
@@ -240,6 +277,12 @@ export default function Home() {
     setIsLoading(true);
     
     try {
+      console.log('Generating subtasks for task:', {
+        taskId,
+        name: task.name,
+        description: task.description
+      });
+
       const response = await fetch(`${config.apiBaseUrl}/api/generate-subtasks`, {
         method: 'POST',
         headers: {
@@ -259,55 +302,30 @@ export default function Home() {
       }
 
       const data = await response.json();
+      console.log('Received subtasks from API:', data.subtasks);
       
-      // Save subtasks to Supabase
-      const savedSubtasks = await Promise.all(
-        data.subtasks.map(async (subtask: Subtask) => {
-          try {
-            console.log('Attempting to save subtask:', {
-              task_id: taskId,
-              name: subtask.name,
-              description: subtask.description,
-              duration_minutes: subtask.duration_minutes,
-            });
-
-            const savedSubtask = await createSubtask({
-              task_id: taskId,
-              name: subtask.name,
-              description: subtask.description,
-              duration_minutes: subtask.duration_minutes,
-            });
-
-            console.log('Subtask saved successfully:', savedSubtask);
-            return { ...subtask, id: savedSubtask.id };
-          } catch (error) {
-            console.error('Error saving subtask to database:', {
-              error,
-              errorMessage: error instanceof Error ? error.message : 'Unknown error',
-              errorStack: error instanceof Error ? error.stack : undefined,
-              subtask: {
-                task_id: taskId,
-                name: subtask.name,
-                description: subtask.description,
-                duration_minutes: subtask.duration_minutes,
-              }
-            });
-            return subtask;
-          }
-        })
-      );
-
+      // Update task with generated subtasks
       setTasks(prev => prev.map(t => 
         t.id === taskId
-          ? { ...t, subtasks: savedSubtasks, hasSubtasks: true }
+          ? { 
+              ...t, 
+              subtasks: data.subtasks.map((subtask: Subtask) => ({
+                ...subtask,
+                isTimerRunning: false,
+                timeRemaining: subtask.duration_minutes * 60
+              })), 
+              hasSubtasks: true 
+            }
           : t
       ));
+
     } catch (error) {
       console.error('Error generating subtasks:', {
-        error,
-        errorMessage: error instanceof Error ? error.message : 'Unknown error',
-        errorStack: error instanceof Error ? error.stack : undefined
+        error: error instanceof Error ? error.message : 'Unknown error',
+        stack: error instanceof Error ? error.stack : undefined,
+        taskId
       });
+      // Don't throw the error, just log it
     } finally {
       setIsLoading(false);
     }
@@ -621,7 +639,7 @@ export default function Home() {
   return (
     <>
       <Navbar onSigningOut={setIsSigningOut} />
-      
+
       {(isLoading || isSigningOut) && (
         <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50">
           <div className="bg-zinc-900 p-6 rounded-2xl flex flex-col items-center gap-4">
@@ -789,4 +807,3 @@ export default function Home() {
     </>
   );
 }
-
