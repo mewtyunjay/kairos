@@ -4,16 +4,23 @@ import { useState, useEffect, useRef } from 'react'
 import { default as Navbar } from './components/Navbar'
 import TaskCard from './components/TaskCard'
 import TimerPill from './components/TimerPill'
-import { Task, TimerState } from './types'
+import { Task, TimerState, Subtask } from './types'
 import { v4 as uuidv4 } from 'uuid'
 import { motion, AnimatePresence } from 'framer-motion'
 import { config } from './config'
 import { useAuth } from '../contexts/AuthContext'
+import { useApi } from '../hooks/useApi'
 
 export default function Home() {
   const { user, loading, signIn } = useAuth()
+  const { updateTaskCompletion, updateSubtaskCompletion, createTask, createSubtask, getTodaysTasks } = useApi()
   const [tasks, setTasks] = useState<Task[]>([]);
-  const [isLoading, setIsLoading] = useState(false);
+  const [pendingUpdates, setPendingUpdates] = useState<{
+    taskId: string;
+    subtaskId?: string;
+    is_completed: boolean;
+  }[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
   const [isSigningOut, setIsSigningOut] = useState(false);
   const [hasStartedPlanning, setHasStartedPlanning] = useState(false);
   const [userInput, setUserInput] = useState('');
@@ -41,20 +48,111 @@ export default function Home() {
   }, [userInput, hasStartedPlanning]);
 
   useEffect(() => {
-    const savedTasks = localStorage.getItem('tasks');
-    const savedUserInput = localStorage.getItem('userInput');
-    const savedHasStartedPlanning = localStorage.getItem('hasStartedPlanning');
+    const loadUserTasks = async () => {
+      if (!user) {
+        console.log('No user found, skipping task load');
+        setIsLoading(false);
+        setTasks([]);
+        setHasStartedPlanning(false);
+        setPendingUpdates([]);
+        setUserInput('');
+        setTimerState({
+          taskId: null,
+          subtaskId: null,
+          startTime: null,
+          timeRemaining: 0,
+          isRunning: false
+        });
+        setIsCompletedVisible(false);
+        return;
+      }
+      
+      try {
+        setIsLoading(true);
+        console.log('Loading tasks for user:', {
+          userId: user.id,
+          email: user.email,
+          authStatus: 'authenticated'
+        });
 
-    if (savedTasks) setTasks(JSON.parse(savedTasks));
-    if (savedUserInput) setUserInput(savedUserInput);
-    if (savedHasStartedPlanning) setHasStartedPlanning(JSON.parse(savedHasStartedPlanning));
-  }, []);
+        const userTasks = await getTodaysTasks(user.id);
+        
+        if (Array.isArray(userTasks) && userTasks.length > 0) {
+          console.log('Found tasks for today:', {
+            count: userTasks.length,
+            userId: user.id
+          });
+          setTasks(userTasks);
+          setHasStartedPlanning(true);
+          // Clear any saved planning state since we have tasks
+          localStorage.removeItem(`userInput_${user.id}`);
+          localStorage.removeItem(`hasStartedPlanning_${user.id}`);
+        } else {
+          console.log('No tasks found for today:', {
+            userId: user.id,
+            authStatus: 'authenticated'
+          });
+          setTasks([]);
+          setPendingUpdates([]);
+          // Only restore saved state if we don't have tasks
+          const savedUserInput = localStorage.getItem(`userInput_${user.id}`);
+          const savedHasStartedPlanning = localStorage.getItem(`hasStartedPlanning_${user.id}`);
+          if (savedUserInput) {
+            console.log('Restoring saved user input');
+            setUserInput(savedUserInput);
+          }
+          if (savedHasStartedPlanning) {
+            console.log('Restoring saved planning state');
+            setHasStartedPlanning(JSON.parse(savedHasStartedPlanning));
+          } else {
+            console.log('No saved state found, showing planning page');
+            setHasStartedPlanning(false);
+          }
+        }
+      } catch (error) {
+        console.error('Error loading user tasks:', {
+          error,
+          errorMessage: error instanceof Error ? error.message : 'Unknown error',
+          errorStack: error instanceof Error ? error.stack : undefined,
+          userId: user.id,
+          email: user.email,
+          authStatus: 'authenticated'
+        });
+        // On error, reset to initial state
+        setTasks([]);
+        setHasStartedPlanning(false);
+        setPendingUpdates([]);
+        setUserInput('');
+      } finally {
+        setIsLoading(false);
+      }
+    };
 
-  useEffect(() => {
-    localStorage.setItem('tasks', JSON.stringify(tasks));
-    localStorage.setItem('userInput', userInput);
-    localStorage.setItem('hasStartedPlanning', JSON.stringify(hasStartedPlanning));
-  }, [tasks, userInput, hasStartedPlanning]);
+    // Reset state when user changes
+    if (!user) {
+      console.log('User logged out, clearing state');
+      setTasks([]);
+      setHasStartedPlanning(false);
+      setUserInput('');
+      setPendingUpdates([]);
+      setTimerState({
+        taskId: null,
+        subtaskId: null,
+        startTime: null,
+        timeRemaining: 0,
+        isRunning: false
+      });
+      setIsCompletedVisible(false);
+    } else {
+      console.log('User state changed:', {
+        userId: user.id,
+        email: user.email,
+        authStatus: 'authenticated'
+      });
+    }
+
+    loadUserTasks();
+  }, [user, getTodaysTasks]);
 
   useEffect(() => {
     let interval: NodeJS.Timeout;
@@ -89,17 +187,30 @@ export default function Home() {
   }, [timerState.isRunning, timerState.taskId]);
 
   const handlePlanDay = async () => {
-    if (!userInput.trim()) return;
+    if (!userInput.trim() || !user) return;
     
     setIsLoading(true)
     
     try {
+      // Get today's date in local timezone
+      const today = new Date();
+      const year = today.getFullYear();
+      const month = String(today.getMonth() + 1).padStart(2, '0'); // Add 1 because months are 0-indexed
+      const day = String(today.getDate()).padStart(2, '0');
+      const formattedDate = `${year}-${month}-${day}`;
+      
+      console.log('Creating tasks for date:', formattedDate, 'in timezone:', Intl.DateTimeFormat().resolvedOptions().timeZone);
+
       const response = await fetch(`${config.apiBaseUrl}/api/plan`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify({ prompt: userInput }),
+        body: JSON.stringify({ 
+          prompt: userInput,
+          user_id: user.id,
+          date: formattedDate
+        }),
       });
 
       if (!response.ok) {
@@ -114,16 +225,46 @@ export default function Home() {
         throw new Error('Invalid response from server');
       }
 
+      // Tasks are already saved in Supabase by the backend
       setTasks(data.tasks);
       setHasStartedPlanning(true);
     } catch (error) {
-      console.error('Error planning tasks:', error);
+      console.error('Error planning tasks:', {
+        error,
+        errorMessage: error instanceof Error ? error.message : 'Unknown error',
+        errorStack: error instanceof Error ? error.stack : undefined
+      });
     } finally {
       setIsLoading(false);
     }
   };
 
-  const handleTaskUpdate = (updatedTask: Task) => {
+  const handleTaskUpdate = async (updatedTask: Task) => {
+    // If completion status has changed, add to pending updates
+    const existingTask = tasks.find(t => t.id === updatedTask.id);
+    if (existingTask && existingTask.is_completed !== updatedTask.is_completed) {
+      // Add task update
+      const updates = [{
+        taskId: updatedTask.id,
+        is_completed: updatedTask.is_completed || false
+      }];
+      
+      // Add subtask updates if task has subtasks
+      const subtasks = updatedTask.subtasks || [];
+      if (subtasks.length > 0) {
+        updates.push(
+          ...subtasks.map(subtask => ({
+            taskId: updatedTask.id,
+            subtaskId: subtask.id,
+            is_completed: updatedTask.is_completed || false
+          }))
+        );
+      }
+
+      setPendingUpdates(prev => [...prev, ...updates]);
+    }
+
+    // Update local state
     setTasks(prev => prev.map(task => 
       task.id === updatedTask.id ? updatedTask : task
     ));
@@ -136,6 +277,12 @@ export default function Home() {
     setIsLoading(true);
     
     try {
+      console.log('Generating subtasks for task:', {
+        taskId,
+        name: task.name,
+        description: task.description
+      });
+
       const response = await fetch(`${config.apiBaseUrl}/api/generate-subtasks`, {
         method: 'POST',
         headers: {
@@ -155,14 +302,30 @@ export default function Home() {
       }
 
       const data = await response.json();
+      console.log('Received subtasks from API:', data.subtasks);
       
+      // Update task with generated subtasks
       setTasks(prev => prev.map(t => 
         t.id === taskId
-          ? { ...t, subtasks: data.subtasks, hasSubtasks: true }
+          ? { 
+              ...t, 
+              subtasks: data.subtasks.map((subtask: Subtask) => ({
+                ...subtask,
+                isTimerRunning: false,
+                timeRemaining: subtask.duration_minutes * 60
+              })), 
+              hasSubtasks: true 
+            }
           : t
       ));
+
     } catch (error) {
-      console.error('Error generating subtasks:', error);
+      console.error('Error generating subtasks:', {
+        error: error instanceof Error ? error.message : 'Unknown error',
+        stack: error instanceof Error ? error.stack : undefined,
+        taskId
+      });
+      // Don't throw the error, just log it
     } finally {
       setIsLoading(false);
     }
@@ -249,17 +412,41 @@ export default function Home() {
               ...s,
               isTimerRunning: false,
               timeRemaining: s.duration_minutes * 60,
-              isCompleted: s.id === subtaskId ? true : s.isCompleted
+              is_completed: s.id === subtaskId ? true : s.is_completed
             }))
           }
         : t
     ));
   };
 
-  const handleReset = () => {
+  const handleReset = async () => {
+    // Save any pending updates before resetting
+    if (pendingUpdates.length > 0) {
+      try {
+        await Promise.all(
+          pendingUpdates.map(async (update) => {
+            if (update.subtaskId) {
+              await updateSubtaskCompletion(update.subtaskId, update.is_completed);
+            } else {
+              await updateTaskCompletion(update.taskId, update.is_completed);
+            }
+          })
+        );
+        setPendingUpdates([]);
+      } catch (error) {
+        console.error('Error saving completion updates:', error);
+      }
+    }
+
     setHasStartedPlanning(false);
     setTasks([]);
     setUserInput('');
+    
+    // Clear user-specific localStorage
+    if (user) {
+      localStorage.removeItem(`userInput_${user.id}`);
+      localStorage.removeItem(`hasStartedPlanning_${user.id}`);
+    }
   };
 
   const startSpeechRecognition = async () => {
@@ -313,6 +500,35 @@ export default function Home() {
     }
   };
 
+  // Add effect to save pending updates when user leaves or resets
+  useEffect(() => {
+    const savePendingUpdates = async () => {
+      if (pendingUpdates.length === 0) return;
+
+      try {
+        await Promise.all(
+          pendingUpdates.map(async (update) => {
+            if (update.subtaskId) {
+              await updateSubtaskCompletion(update.subtaskId, update.is_completed);
+            } else {
+              await updateTaskCompletion(update.taskId, update.is_completed);
+            }
+          })
+        );
+        setPendingUpdates([]);
+      } catch (error) {
+        console.error('Error saving completion updates:', error);
+      }
+    };
+
+    // Save updates when component unmounts
+    window.addEventListener('beforeunload', savePendingUpdates);
+    return () => {
+      window.removeEventListener('beforeunload', savePendingUpdates);
+      savePendingUpdates();
+    };
+  }, [pendingUpdates, updateTaskCompletion, updateSubtaskCompletion]);
+
   if (!loading && !user) {
     return (
       <div className="min-h-screen bg-gradient-to-b from-gray-900 via-gray-800 to-black text-white">
@@ -325,17 +541,18 @@ export default function Home() {
             <div className="mx-auto max-w-7xl px-6 lg:px-8">
               <div className="mx-auto max-w-2xl text-center">
                 <h1 className="text-4xl font-bold tracking-tight sm:text-6xl bg-clip-text text-transparent bg-gradient-to-r from-blue-500 to-teal-400">
-                  ActionFlow
+                  Kairos
                 </h1>
                 <p className="mt-6 text-lg leading-8 text-gray-300">
-                  Turn brain fog into clear, actionable tasks daily.
+                  Turn brain fog into clear, actionable daily tasks.
                 </p>
                 <div className="mt-10 flex items-center justify-center gap-x-6">
                   <button
                     onClick={() => signIn()}
-                    className="rounded-xl bg-blue-500 px-8 py-4 text-lg font-semibold text-white shadow-sm hover:bg-blue-400 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-blue-400 transition-all duration-200"
+                    className="rounded-xl bg-blue-500 px-8 py-4 text-lg font-semibold text-white shadow-sm hover:bg-blue-400 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-blue-400 transition-all duration-200 flex items-center"
                   >
-                    Login with Google
+                    <img src="https://www.google.com/favicon.ico" alt="Google Favicon" className="h-5 w-5 mr-2" />
+                    Login with Google 
                   </button>
                 </div>
               </div>
@@ -386,12 +603,12 @@ export default function Home() {
         {/* Why Section */}
         <div className="mx-auto max-w-7xl px-6 lg:px-8 py-24">
           <div className="text-center">
-            <h2 className="text-2xl font-semibold leading-7 text-blue-400">Why ActionFlow?</h2>
-            <p className="mt-2 text-4xl font-bold tracking-tight text-white sm:text-5xl max-w-3xl mx-auto">
-              Overcome the friction between planning and action
+            <h2 className="text-2xl font-semibold leading-7 text-blue-400">Why Kairos?</h2>
+            <p className="mt-2 text-2xl font-bold tracking-tight text-white sm:text-3xl max-w-3xl mx-auto">
+              Bridge the gap between planning and action
             </p>
             
-            <p className="mt-16 text-xl font-medium text-white max-w-4xl mx-auto leading-relaxed">
+            <p className="mt-16 text-x font-medium text-white max-w-4xl mx-auto leading-relaxed">
               You know your goals, but juggling the big picture and small details can be overwhelming. Let us handle the mental load and break down your goals, giving you a clear roadmap instead of getting stuck in analysis paralysis.
             </p>
           </div>
@@ -402,7 +619,7 @@ export default function Home() {
           <div className="mx-auto max-w-7xl px-6 lg:px-8">
             <div className="border-t border-gray-800 pt-8">
               <p className="text-center text-sm leading-5 text-gray-400">
-                built by <a href="https://x.com/mewtyunjay" className="text-blue-400 hover:text-blue-300 transition-colors">@mewtyunjay</a>
+                built by <a href="https://x.com/mewtyunjay" className="text-blue-400 hover:text-blue-300 transition-colors">mewtyunjay</a>
               </p>
             </div>
           </div>
@@ -411,7 +628,7 @@ export default function Home() {
     )
   }
 
-  if (loading) {
+  if (loading || isLoading) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-gray-900">
         <div className="text-white">Loading...</div>
@@ -422,7 +639,7 @@ export default function Home() {
   return (
     <>
       <Navbar onSigningOut={setIsSigningOut} />
-      
+
       {(isLoading || isSigningOut) && (
         <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50">
           <div className="bg-zinc-900 p-6 rounded-2xl flex flex-col items-center gap-4">
@@ -495,22 +712,32 @@ export default function Home() {
           <div className="max-w-4xl mx-auto space-y-6">
             {/* Active Tasks */}
             <div className="space-y-4">
-              <div className="flex justify-between items-center">
-                <h2 className="text-2xl font-medium">Your Tasks</h2>
-                <button
-                  onClick={handleReset}
-                  className="text-sm px-4 py-2 rounded-lg bg-gray-800 hover:bg-gray-700 text-gray-300 transition-all flex items-center gap-2"
-                >
-                  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" className="w-4 h-4">
-                    <path d="M10.75 4.75a.75.75 0 00-1.5 0v4.5h-4.5a.75.75 0 000 1.5h4.5v4.5a.75.75 0 001.5 0v-4.5h4.5a.75.75 0 000-1.5h-4.5v-4.5z" />
-                  </svg>
-                  New Plan
-                </button>
+              <div className="space-y-2">
+                <p className="text-2xl font-medium text-blue-400/90">
+                  {new Date().toLocaleDateString('en-US', { 
+                    weekday: 'long',
+                    month: 'long',
+                    day: 'numeric',
+                    year: 'numeric'
+                  })}
+                </p>
+                <div className="flex justify-between items-center">
+                  <h2 className="text-2xl font-medium">Your Tasks</h2>
+                  <button
+                    onClick={handleReset}
+                    className="text-sm px-4 py-2 rounded-lg bg-gray-800 hover:bg-gray-700 text-gray-300 transition-all flex items-center gap-2"
+                  >
+                    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" className="w-4 h-4">
+                      <path d="M10.75 4.75a.75.75 0 00-1.5 0v4.5h-4.5a.75.75 0 000 1.5h4.5v4.5a.75.75 0 001.5 0v-4.5h4.5a.75.75 0 000-1.5h-4.5v-4.5z" />
+                    </svg>
+                    Start Over
+                  </button>
+                </div>
               </div>
               <motion.div layout className="space-y-4">
                 <AnimatePresence mode="popLayout">
                   {tasks
-                    .filter(task => !task.isCompleted)
+                    .filter(task => !task.is_completed)
                     .sort((a, b) => a.priority - b.priority)
                     .map((task, index) => (
                       <TaskCard
@@ -527,7 +754,7 @@ export default function Home() {
             </div>
 
             {/* Completed Tasks */}
-            {tasks.some(task => task.isCompleted) && (
+            {tasks.some(task => task.is_completed) && (
               <div className="space-y-4">
                 <button
                   onClick={() => setIsCompletedVisible(!isCompletedVisible)}
@@ -558,7 +785,7 @@ export default function Home() {
                   >
                     <AnimatePresence mode="popLayout">
                       {tasks
-                        .filter(task => task.isCompleted)
+                        .filter(task => task.is_completed)
                         .map((task, index) => (
                           <TaskCard
                             key={task.id}
@@ -580,4 +807,3 @@ export default function Home() {
     </>
   );
 }
-

@@ -18,6 +18,17 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   useEffect(() => {
     const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
+      if (event === 'SIGNED_IN' && session?.user) {
+        console.log('🔐 User logged in:', {
+          userId: session.user.id,
+          email: session.user.email,
+          event
+        });
+      } else if (event === 'TOKEN_REFRESHED') {
+        console.log('Token refreshed successfully');
+      } else if (event === 'SIGNED_OUT') {
+        console.log('User signed out');
+      }
       setUser(session?.user ?? null)
       setLoading(false)
     })
@@ -26,13 +37,51 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   }, [])
 
   const signIn = async () => {
-    await supabase.auth.signInWithOAuth({
-      provider: 'google'
-    })
+    try {
+      const { error } = await supabase.auth.signInWithOAuth({
+        provider: 'google',
+        options: {
+          queryParams: {
+            prompt: 'select_account'
+          },
+          redirectTo: window.location.origin
+        }
+      })
+
+      if (error) {
+        console.error('Error during sign in:', {
+          error,
+          errorMessage: error.message,
+          errorStatus: error.status
+        });
+        
+        // If it's a rate limit error, show a user-friendly message
+        if (error.status === 429) {
+          alert('Too many login attempts. Please wait a moment and try again.');
+        } else {
+          alert('Failed to sign in. Please try again.');
+        }
+      }
+    } catch (error) {
+      console.error('Unexpected error during sign in:', error);
+      alert('An unexpected error occurred. Please try again.');
+    }
   }
 
   const signOut = async () => {
-    await supabase.auth.signOut()
+    try {
+      const { error } = await supabase.auth.signOut()
+      if (error) {
+        console.error('Error during sign out:', {
+          error,
+          errorMessage: error.message
+        });
+        alert('Failed to sign out. Please try again.');
+      }
+    } catch (error) {
+      console.error('Unexpected error during sign out:', error);
+      alert('An unexpected error occurred while signing out. Please try again.');
+    }
   }
 
   return (

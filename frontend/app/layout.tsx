@@ -10,7 +10,7 @@ const jetbrainsMono = JetBrains_Mono({
 })
 
 export const metadata = {
-  title: 'ActionFlow | Turn Brainfog into Action',
+  title: 'Kairos | Turn Brainfog into Action',
   description: 'Reduce overwhelm and make consistent progress with automated task planning. Built for the ADHD brain.',
 }
 

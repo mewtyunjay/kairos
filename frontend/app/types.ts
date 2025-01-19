@@ -1,23 +1,30 @@
 export interface Task {
   id: string;
+  user_id?: string;
   name: string;
   description: string;
   duration_minutes: number;
   priority: number;
+  date?: string;
+  is_completed?: boolean;
+  created_at?: string;
+  updated_at?: string;
   isEditing?: boolean;
   isTimerRunning?: boolean;
   timeRemaining?: number;
   hasSubtasks?: boolean;
   subtasks?: Subtask[];
-  isCompleted?: boolean;
 }
 
 export interface Subtask {
   id: string;
+  task_id?: string;
   name: string;
   description: string;
   duration_minutes: number;
-  isCompleted: boolean;
+  is_completed?: boolean;
+  created_at?: string;
+  updated_at?: string;
   isEditing?: boolean;
   isTimerRunning?: boolean;
   timeRemaining?: number;

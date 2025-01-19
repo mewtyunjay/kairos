@@ -22,7 +22,7 @@ export default function Navbar({ onSigningOut }: NavbarProps) {
         <div className="flex h-16 justify-between items-center">
           <div className="flex items-center">
             <span className="text-xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-blue-500 to-teal-400">
-              ActionFlow
+              Kairos
             </span>
           </div>
           <div className="flex items-center gap-4">

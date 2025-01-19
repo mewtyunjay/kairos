@@ -4,6 +4,7 @@ import { useState } from 'react'
 import { Task, Subtask } from '../types'
 import TimerPill from './TimerPill'
 import { motion, AnimatePresence } from 'framer-motion'
+import { useApi } from '../../hooks/useApi'
 
 interface TaskCardProps {
   task: Task;
@@ -14,6 +15,7 @@ interface TaskCardProps {
 }
 
 export default function TaskCard({ task, onUpdate, onGenerateSubtasks, onTimerClick, index }: TaskCardProps) {
+  const { updateSubtaskCompletion } = useApi()
   const [isEditing, setIsEditing] = useState(false);
   const [editedTask, setEditedTask] = useState(task);
   const [isSubtasksCollapsed, setIsSubtasksCollapsed] = useState(false);
@@ -42,19 +44,45 @@ export default function TaskCard({ task, onUpdate, onGenerateSubtasks, onTimerCl
   const handleComplete = () => {
     onUpdate({
       ...task,
-      isCompleted: !task.isCompleted,
+      is_completed: !task.is_completed,
       isTimerRunning: false,
-      timeRemaining: undefined
+      timeRemaining: undefined,
+      // If task is being marked as complete, mark all subtasks as complete too
+      subtasks: task.subtasks?.map(s => ({
+        ...s,
+        is_completed: !task.is_completed,
+        isTimerRunning: false,
+        timeRemaining: undefined
+      }))
     });
   };
 
-  const handleSubtaskUpdate = (subtask: Subtask, index: number) => {
+  const handleSubtaskUpdate = async (subtask: Subtask, index: number) => {
     const updatedSubtasks = [...(task.subtasks || [])];
     if (subtask.isEditing === false) {
       delete subtask.isEditing;
     }
+
+    // If completion status has changed, update it in the database
+    const existingSubtask = task.subtasks?.[index];
+    if (existingSubtask && existingSubtask.is_completed !== subtask.is_completed) {
+      try {
+        await updateSubtaskCompletion(subtask.id, subtask.is_completed || false);
+      } catch (error) {
+        console.error('Error updating subtask completion:', error);
+        return; // Don't update local state if database update fails
+      }
+    }
+
     updatedSubtasks[index] = subtask;
-    onUpdate({ ...task, subtasks: updatedSubtasks });
+    
+    // Check if all subtasks are complete and update parent task accordingly
+    const allSubtasksComplete = updatedSubtasks.every(s => s.is_completed);
+    onUpdate({ 
+      ...task, 
+      subtasks: updatedSubtasks,
+      is_completed: allSubtasksComplete
+    });
   };
 
   return (
@@ -70,7 +98,7 @@ export default function TaskCard({ task, onUpdate, onGenerateSubtasks, onTimerCl
         opacity: { duration: 0.3 }
       }}
       className={`task-card p-3 rounded-xl bg-zinc-800/30 hover:bg-zinc-800/50 ${
-        task.isCompleted ? 'opacity-60' : ''
+        task.is_completed ? 'opacity-60' : ''
       }`}
     >
       <motion.div layout="position" className="flex items-start justify-between gap-3">
@@ -126,13 +154,13 @@ export default function TaskCard({ task, onUpdate, onGenerateSubtasks, onTimerCl
               </div>
             ) : (
               <>
-                <h4 className={`font-medium text-base ${task.isCompleted ? 'line-through text-zinc-500' : ''}`}>
+                <h4 className={`font-medium text-base ${task.is_completed ? 'line-through text-zinc-500' : ''}`}>
                   {task.name}
                 </h4>
-                <p className={`text-sm text-zinc-400 ${task.isCompleted ? 'line-through' : ''}`}>
+                <p className={`text-sm text-zinc-400 ${task.is_completed ? 'line-through' : ''}`}>
                   {task.description}
                 </p>
-                {!task.hasSubtasks && !task.isCompleted && (
+                {!task.hasSubtasks && !task.is_completed && (
                   <button
                     onClick={() => onGenerateSubtasks(task.id)}
                     className="mt-2 text-xs text-blue-400 hover:text-blue-300 transition-colors flex items-center gap-1"
@@ -148,7 +176,7 @@ export default function TaskCard({ task, onUpdate, onGenerateSubtasks, onTimerCl
           </motion.div>
         </div>
         <motion.div layout="position" className="flex items-center gap-2">
-          {!task.isCompleted && (
+          {!task.is_completed && (
             <motion.div layout="position">
               <TimerPill
                 duration={task.duration_minutes}
@@ -176,12 +204,12 @@ export default function TaskCard({ task, onUpdate, onGenerateSubtasks, onTimerCl
         <button
           onClick={handleComplete}
           className={`px-2.5 py-1 rounded-lg text-xs ${
-            task.isCompleted
+            task.is_completed
               ? 'bg-zinc-700/50 text-zinc-400 hover:bg-zinc-600/50'
               : 'bg-green-500/20 text-green-400 hover:bg-green-500/30'
           }`}
         >
-          {task.isCompleted ? 'Mark as Incomplete' : 'Mark as Complete'}
+          {task.is_completed ? 'Mark as Incomplete' : 'Mark as Complete'}
         </button>
       </motion.div>
 
@@ -198,15 +226,15 @@ export default function TaskCard({ task, onUpdate, onGenerateSubtasks, onTimerCl
               <div
                 key={subtask.id}
                 className={`p-2 rounded-lg ${
-                  subtask.isCompleted ? 'bg-zinc-800/20' : 'bg-zinc-800/30'
+                  subtask.is_completed ? 'bg-zinc-800/20' : 'bg-zinc-800/30'
                 } flex items-center gap-2`}
               >
                 <input
                   type="checkbox"
-                  checked={subtask.isCompleted}
+                  checked={subtask.is_completed}
                   onChange={() => {
                     handleSubtaskUpdate(
-                      { ...subtask, isCompleted: !subtask.isCompleted },
+                      { ...subtask, is_completed: !subtask.is_completed },
                       index
                     );
                   }}
@@ -233,7 +261,7 @@ export default function TaskCard({ task, onUpdate, onGenerateSubtasks, onTimerCl
                       autoFocus
                     />
                   ) : (
-                    <span className={`text-sm ${subtask.isCompleted ? 'line-through text-zinc-500' : ''}`}>
+                    <span className={`text-sm ${subtask.is_completed ? 'line-through text-zinc-500' : ''}`}>
                       {subtask.name}
                     </span>
                   )}
